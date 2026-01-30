@@ -1,253 +1,739 @@
 <!DOCTYPE html>
+
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ビジネス統計学・適性診断</title>
-    
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="ビジネス診断">
-
+    <title>ビジネス統計学・適性診断ツール</title>
     <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { 
-            font-family: 'Hiragino Sans', 'Meiryo', sans-serif; 
-            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d); 
-            min-height: 100vh; 
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+```
+    body {
+        font-family: 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', 'Meiryo', sans-serif;
+        background: linear-gradient(135deg, #1a2a6c 0%, #b21f1f 50%, #fdbb2d 100%);
+        min-height: 100vh;
+        padding: 20px;
+    }
+    
+    .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 20px;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        padding: 40px;
+    }
+    
+    h1 {
+        text-align: center;
+        color: #2d3748;
+        margin-bottom: 10px;
+        font-size: 2.5em;
+    }
+    
+    .subtitle {
+        text-align: center;
+        color: #718096;
+        margin-bottom: 40px;
+        font-size: 1.1em;
+    }
+    
+    .input-section {
+        background: #f7fafc;
+        padding: 30px;
+        border-radius: 15px;
+        margin-bottom: 30px;
+    }
+    
+    .form-group {
+        margin-bottom: 20px;
+    }
+    
+    label {
+        display: block;
+        color: #4a5568;
+        font-weight: bold;
+        margin-bottom: 8px;
+        font-size: 1.05em;
+    }
+    
+    input {
+        width: 100%;
+        padding: 12px;
+        border: 2px solid #e2e8f0;
+        border-radius: 8px;
+        font-size: 16px;
+        transition: border-color 0.3s;
+    }
+    
+    input:focus {
+        outline: none;
+        border-color: #2d3748;
+    }
+    
+    .calculate-btn {
+        width: 100%;
+        padding: 18px;
+        background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%);
+        color: white;
+        border: none;
+        border-radius: 10px;
+        font-size: 1.2em;
+        font-weight: bold;
+        cursor: pointer;
+        transition: transform 0.2s, box-shadow 0.2s;
+        margin-top: 10px;
+    }
+    
+    .calculate-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px rgba(45, 55, 72, 0.4);
+    }
+    
+    .result-section {
+        display: none;
+        margin-top: 40px;
+    }
+    
+    .result-section.show {
+        display: block;
+        animation: fadeIn 0.5s;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .meishiki-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 20px 0;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        border-radius: 10px;
+        overflow: hidden;
+    }
+    
+    .meishiki-table th {
+        background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%);
+        color: white;
+        padding: 15px;
+        text-align: center;
+        font-size: 1.05em;
+    }
+    
+    .meishiki-table td {
+        padding: 18px;
+        text-align: center;
+        border: 1px solid #e2e8f0;
+        font-size: 1.3em;
+        font-weight: bold;
+        background: white;
+    }
+    
+    .label-cell {
+        background: #edf2f7 !important;
+        color: #4a5568;
+        font-size: 0.95em !important;
+        width: 20%;
+    }
+    
+    .tenkan {
+        color: #e53e3e;
+    }
+    
+    .star-cell {
+        color: #d69e2e;
+        background: #fffaf0 !important;
+        font-size: 1.2em !important;
+    }
+    
+    .main-star {
+        background: #fff5f5 !important;
+        border: 3px solid #e53e3e !important;
+        font-size: 1.35em !important;
+        font-weight: 900 !important;
+    }
+    
+    .content-box {
+        background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+        border-left: 5px solid #3b82f6;
+        padding: 25px;
+        margin: 20px 0;
+        border-radius: 8px;
+        box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+    }
+    
+    .content-box h3 {
+        color: #1e40af;
+        margin-bottom: 15px;
+        font-size: 1.4em;
+    }
+    
+    .content-box p, .content-box ul {
+        color: #1e293b;
+        line-height: 1.8;
+        font-size: 1.05em;
+    }
+    
+    .content-box ul {
+        margin-left: 20px;
+        margin-top: 10px;
+    }
+    
+    .content-box li {
+        margin-bottom: 8px;
+    }
+    
+    .star-highlight {
+        background: linear-gradient(135deg, #fef5e7 0%, #fff9e6 100%);
+        border-left: 5px solid #d69e2e;
+        padding: 30px;
+        margin: 25px 0;
+        border-radius: 8px;
+        box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+    }
+    
+    .star-highlight h3 {
+        color: #b7791f;
+        margin-bottom: 15px;
+        font-size: 1.5em;
+    }
+    
+    .star-highlight p {
+        color: #2d3748;
+        line-height: 1.8;
+        font-size: 1.1em;
+    }
+    
+    .success-box {
+        background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+        border-left: 5px solid #22c55e;
+        padding: 25px;
+        margin: 20px 0;
+        border-radius: 8px;
+    }
+    
+    .success-box h3 {
+        color: #15803d;
+        margin-bottom: 15px;
+        font-size: 1.3em;
+    }
+    
+    .warning-box {
+        background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+        border-left: 5px solid #ef4444;
+        padding: 25px;
+        margin: 20px 0;
+        border-radius: 8px;
+    }
+    
+    .warning-box h3 {
+        color: #991b1b;
+        margin-bottom: 15px;
+        font-size: 1.3em;
+    }
+    
+    .compatibility-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 15px;
+        margin-top: 15px;
+    }
+    
+    .compatibility-item {
+        background: white;
+        padding: 15px;
+        border-radius: 8px;
+        border: 2px solid #e2e8f0;
+    }
+    
+    .compatibility-item strong {
+        color: #2d3748;
+        display: block;
+        margin-bottom: 5px;
+    }
+    
+    .lucky-color {
+        display: inline-block;
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        border: 2px solid #2d3748;
+        vertical-align: middle;
+        margin-left: 10px;
+    }
+    
+    .section-divider {
+        height: 2px;
+        background: linear-gradient(90deg, transparent, #e2e8f0, transparent);
+        margin: 40px 0;
+    }
+    
+    .disclaimer {
+        font-size: 0.85em;
+        color: #a0aec0;
+        margin-top: 30px;
+        text-align: center;
+        padding: 20px;
+        background: #f7fafc;
+        border-radius: 8px;
+    }
+    
+    @media (max-width: 768px) {
+        .container {
             padding: 20px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
         }
-        .container { 
-            max-width: 500px; 
-            width: 100%;
-            background: rgba(255, 255, 255, 0.98); 
-            border-radius: 30px; 
-            padding: 40px 30px; 
-            box-shadow: 0 20px 60px rgba(0,0,0,0.5); 
-        }
-        h1 { text-align: center; color: #2d3748; font-size: 1.6rem; margin-bottom: 5px; }
-        .subtitle { text-align: center; color: #718096; font-size: 0.85rem; margin-bottom: 30px; }
         
-        .input-section { 
-            background: #f8fafc; 
-            padding: 25px; 
-            border-radius: 20px; 
-            margin-bottom: 30px;
-            border: 1px solid #edf2f7;
+        h1 {
+            font-size: 1.8em;
         }
-        label { display: block; font-weight: bold; margin-bottom: 10px; color: #4a5568; }
-        input[type="date"] { 
-            width: 100%; 
-            padding: 15px; 
-            border-radius: 12px; 
-            border: 2px solid #e2e8f0; 
-            font-size: 1.1rem;
-            margin-bottom: 20px;
-            outline: none;
-            transition: 0.3s;
-        }
-        input[type="date"]:focus { border-color: #1a2a6c; }
         
-        .calculate-btn { 
-            width: 100%; 
-            padding: 20px; 
-            background: linear-gradient(to right, #1a2a6c, #b21f1f);
-            color: white; 
-            border: none; 
-            border-radius: 15px; 
-            font-size: 1.2rem; 
-            font-weight: bold; 
-            cursor: pointer; 
-            transition: 0.4s;
-            box-shadow: 0 10px 20px rgba(178, 31, 31, 0.3);
+        .meishiki-table td {
+            font-size: 1.1em;
+            padding: 12px;
         }
-        .calculate-btn:hover { transform: translateY(-3px); box-shadow: 0 15px 25px rgba(178, 31, 31, 0.4); }
-
-        #resultSection { 
-            display: none; 
-            animation: fadeInUp 0.8s ease-out forwards;
-        }
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(30px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-
-        .meishiki-table { width: 100%; border-collapse: separate; border-spacing: 5px; margin: 25px 0; }
-        .meishiki-table th { background: #2d3748; color: white; padding: 12px; border-radius: 8px; font-size: 0.75rem; }
-        .meishiki-table td { 
-            padding: 20px 10px; 
-            text-align: center; 
-            background: white; 
-            border: 1px solid #edf2f7; 
-            border-radius: 12px;
-            font-size: 1.4rem; 
-            font-weight: bold;
-            box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
-        }
-        .label-cell { background: #f1f5f9 !important; font-size: 0.8rem !important; color: #64748b; width: 20%; }
-        .star-cell { color: #e53e3e; }
         
-        .main-star-box {
-            background: #fff5f5 !important;
-            border: 3px solid #e53e3e !important;
-            position: relative;
+        .compatibility-grid {
+            grid-template-columns: 1fr;
         }
-        .main-star-label {
-            position: absolute;
-            top: -12px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: #e53e3e;
-            color: white;
-            font-size: 10px;
-            padding: 2px 8px;
-            border-radius: 20px;
-            white-space: nowrap;
-        }
+    }
+</style>
+```
 
-        .info-box { 
-            background: #ffffff; 
-            border-radius: 15px;
-            padding: 25px; 
-            margin-top: 25px; 
-            border: 1px solid #edf2f7;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
-        }
-        .info-box h3 { font-size: 1.1rem; margin-bottom: 10px; border-bottom: 2px solid; display: inline-block; }
-        .info-box p { font-size: 1rem; line-height: 1.7; color: #4a5568; }
-
-        .lucky-color-box {
-            margin-top: 15px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 0.9rem;
-            font-weight: bold;
-        }
-        .color-dot { width: 20px; height: 20px; border-radius: 50%; border: 1px solid #ddd; }
-    </style>
 </head>
 <body>
     <div class="container">
         <h1>📊 ビジネス適性統計診断</h1>
         <p class="subtitle">~ 戦略的な自己分析のための帝王学データ ~</p>
-        
-        <div class="input-section">
-            <label>生年月日を選択</label>
-            <input type="date" id="birthdate">
-            <button class="calculate-btn" onclick="runDiagnostic()">統計データを抽出する</button>
-        </div>
 
-        <div id="resultSection">
-            <table class="meishiki-table">
-                <thead>
-                    <tr>
-                        <th>区分</th>
-                        <th>年柱<br><small>社会運</small></th>
-                        <th>月柱<br><small>仕事運</small></th>
-                        <th>日柱<br><small>本質</small></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td class="label-cell">天干</td>
-                        <td id="nenKan"></td>
-                        <td id="gekkanKan"></td>
-                        <td id="nicchiKan"></td>
-                    </tr>
-                    <tr>
-                        <td class="label-cell">主星</td>
-                        <td class="star-cell" id="starNen"></td>
-                        <td class="star-cell main-star-box" id="starGekkanCell">
-                            <span class="main-star-label">中心星</span>
-                            <span id="starGekkan"></span>
-                        </td>
-                        <td class="star-cell" style="font-size: 0.8rem; color: #cbd5e0;">本人</td>
-                    </tr>
-                </tbody>
-            </table>
-            
-            <div class="info-box">
-                <h3 id="mainStarTitle">あなたの中心星</h3>
-                <p id="starDescription"></p>
-                <div class="lucky-color-box">
-                    <span>ラッキーカラー:</span>
-                    <div id="colorDot" class="color-dot"></div>
-                    <span id="colorName"></span>
-                </div>
-            </div>
+```
+    <div class="input-section">
+        <div class="form-group">
+            <label for="birthdate">生年月日を選択</label>
+            <input type="date" id="birthdate" required>
+        </div>
+        
+        <button class="calculate-btn" onclick="runDiagnostic()">統計データを抽出する</button>
+    </div>
+    
+    <div class="result-section" id="resultSection">
+        <h2 style="color: #2d3748; margin-bottom: 20px; text-align: center; font-size: 1.8em;">🌟 あなたのビジネス命式</h2>
+        
+        <table class="meishiki-table">
+            <thead>
+                <tr>
+                    <th>区分</th>
+                    <th>年柱<br><small>(社会運)</small></th>
+                    <th>月柱<br><small>(仕事運)</small></th>
+                    <th>日柱<br><small>(本質)</small></th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="label-cell">天干</td>
+                    <td class="tenkan" id="nenKan"></td>
+                    <td class="tenkan" id="gekkanKan"></td>
+                    <td class="tenkan" id="nicchiKan"></td>
+                </tr>
+                <tr>
+                    <td class="label-cell">主星</td>
+                    <td class="star-cell" id="starNen"></td>
+                    <td class="star-cell main-star" id="starGekkan"></td>
+                    <td class="star-cell">本人</td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <div class="star-highlight">
+            <h3 id="mainStarTitle">💼 あなたの中心星</h3>
+            <p id="starBasicDesc"></p>
+            <p style="margin-top: 15px;">
+                <strong>ラッキーカラー：</strong>
+                <span class="lucky-color" id="luckyColor"></span>
+                <span id="colorName" style="margin-left: 10px; font-weight: bold;"></span>
+            </p>
+        </div>
+        
+        <div class="content-box">
+            <h3>🎯 ビジネスタイプ</h3>
+            <p id="businessType"></p>
+        </div>
+        
+        <div class="content-box">
+            <h3>💡 向いている仕事・副業</h3>
+            <div id="suitableJobs"></div>
+        </div>
+        
+        <div class="success-box">
+            <h3>✅ 成功戦略</h3>
+            <div id="successStrategy"></div>
+        </div>
+        
+        <div class="warning-box">
+            <h3>⚠️ 避けるべき失敗パターン</h3>
+            <div id="failurePattern"></div>
+        </div>
+        
+        <div class="section-divider"></div>
+        
+        <div class="content-box">
+            <h3>💰 年収アップの秘訣</h3>
+            <p id="incomeStrategy"></p>
+        </div>
+        
+        <div class="content-box">
+            <h3>🤝 相性の良いパートナー</h3>
+            <div class="compatibility-grid" id="compatibility"></div>
+        </div>
+        
+        <div class="content-box">
+            <h3>📈 成功事例</h3>
+            <p id="successCase"></p>
+        </div>
+        
+        <div class="content-box">
+            <h3>🎓 おすすめの学び</h3>
+            <div id="recommendedLearning"></div>
+        </div>
+        
+        <div class="disclaimer">
+            ※本ツールは節入り日を考慮した簡易統計版です。より精密な鑑定をご希望の場合は、プロの鑑定師にご相談ください。<br>
+            ※結果は統計的な傾向を示すものであり、絶対的なものではありません。参考情報としてご活用ください。
         </div>
     </div>
+</div>
 
-    <script>
-        const TENKAN = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸'];
-        const LUCKY_COLORS = {
-            '甲': { name: '深緑（木）', code: '#2F855A' }, '乙': { name: '若草色（木）', code: '#48BB78' },
-            '丙': { name: '赤（火）', code: '#E53E3E' }, '丁': { name: '灯火色（火）', code: '#F56565' },
-            '戊': { name: '黄金色（土）', code: '#D69E2E' }, '己': { name: '黄色（土）', code: '#ECC94B' },
-            '庚': { name: '白金（金）', code: '#718096' }, '辛': { name: '銀色（金）', code: '#A0AEC0' },
-            '壬': { name: '紺青（水）', code: '#2B6CB0' }, '癸': { name: '水色（水）', code: '#4299E1' }
+<script>
+    // 十天干
+    const TENKAN = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸'];
+    
+    // 十二地支
+    const CHISHI = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
+    
+    // 月支の算出
+    const MONTH_BRANCHES = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 0, 1];
+    
+    // 十大主星の対応表
+    const STAR_MAP = {
+        '甲': { '甲':'貫索', '乙':'石門', '丙':'鳳閣', '丁':'調舒', '戊':'禄存', '己':'司禄', '庚':'車騎', '辛':'牽牛', '壬':'龍高', '癸':'玉堂' },
+        '乙': { '乙':'貫索', '甲':'石門', '丁':'鳳閣', '丙':'調舒', '己':'禄存', '戊':'司禄', '辛':'車騎', '庚':'牽牛', '癸':'龍高', '壬':'玉堂' },
+        '丙': { '丙':'貫索', '丁':'石門', '戊':'鳳閣', '己':'調舒', '庚':'禄存', '辛':'司禄', '壬':'車騎', '癸':'牽牛', '甲':'龍高', '乙':'玉堂' },
+        '丁': { '丁':'貫索', '丙':'石門', '己':'鳳閣', '戊':'調舒', '辛':'禄存', '庚':'司禄', '癸':'車騎', '壬':'牽牛', '乙':'龍高', '甲':'玉堂' },
+        '戊': { '戊':'貫索', '己':'石門', '庚':'鳳閣', '辛':'調舒', '壬':'禄存', '癸':'司禄', '甲':'車騎', '乙':'牽牛', '丙':'龍高', '丁':'玉堂' },
+        '己': { '己':'貫索', '戊':'石門', '辛':'鳳閣', '庚':'調舒', '癸':'禄存', '壬':'司禄', '乙':'車騎', '甲':'牽牛', '丁':'龍高', '丙':'玉堂' },
+        '庚': { '庚':'貫索', '辛':'石門', '壬':'鳳閣', '癸':'調舒', '甲':'禄存', '乙':'司禄', '丙':'車騎', '丁':'牽牛', '戊':'龍高', '己':'玉堂' },
+        '辛': { '辛':'貫索', '庚':'石門', '癸':'鳳閣', '壬':'調舒', '乙':'禄存', '甲':'司禄', '丁':'車騎', '丙':'牽牛', '己':'龍高', '戊':'玉堂' },
+        '壬': { '壬':'貫索', '癸':'石門', '甲':'鳳閣', '乙':'調舒', '丙':'禄存', '丁':'司禄', '戊':'車騎', '己':'牽牛', '庚':'龍高', '辛':'玉堂' },
+        '癸': { '癸':'貫索', '壬':'石門', '乙':'鳳閣', '甲':'調舒', '丁':'禄存', '丙':'司禄', '己':'車騎', '戊':'牽牛', '辛':'龍高', '庚':'玉堂' }
+    };
+
+    // 主星の基本説明
+    const STAR_BASIC = {
+        '貫索': '独立独歩の星。自分のペースを大切にし、他人に左右されない強い意志を持ちます。専門性を極めることで真価を発揮します。',
+        '石門': '社交・協調の星。人とのつながりを大切にし、チームで大きな成果を生み出します。ネットワークが最大の資産です。',
+        '鳳閣': '伝達・表現の星。明るく自然体で、人を楽しませる才能があります。情報発信やエンターテイメント分野で輝きます。',
+        '調舒': '感性・創造の星。独自の世界観を持ち、芸術的センスに優れています。唯一無二の価値を生み出すクリエイターです。',
+        '禄存': '引力・財運の星。人とお金を動かす力があり、大規模なビジネスで成功します。投資やプロデュースに適性があります。',
+        '司禄': '蓄積・安定の星。コツコツと信頼を積み上げ、長期的な資産形成が得意です。継続課金型ビジネスで真価を発揮します。',
+        '車騎': '行動・スピードの星。即断即決で動き、現場で結果を出します。営業や短期決戦型ビジネスに向いています。',
+        '牽牛': '名誉・責任の星。社会的信用を重んじ、ブランド価値を高めることに長けています。士業や専門家として成功します。',
+        '龍高': '改革・学習の星。常に新しい知識を求め、変化を恐れません。IT・海外・革新的分野で才能を発揮します。',
+        '玉堂': '知恵・教育の星。深い知識と論理的思考力を持ち、人に教えることで価値を生みます。コンサルタントや講師に最適です。'
+    };
+
+    // ビジネスタイプ
+    const BUSINESS_TYPE = {
+        '貫索': '【独立型】会社員よりもフリーランス・起業家として成功しやすいタイプ。自分の裁量で仕事ができる環境が最適です。',
+        '石門': '【組織型】一人よりチームで働く方が何倍もの力を発揮。人脈構築力を活かしたネットワークビジネスに強みがあります。',
+        '鳳閣': '【表現型】楽しさや情報を発信する仕事で輝きます。SNSやメディアを活用したビジネスが天職です。',
+        '調舒': '【創造型】大衆受けより、熱狂的なファンを作る戦略が吉。ニッチ市場で独自の価値を提供して成功します。',
+        '禄存': '【投資型】小さく稼ぐより大きく回す。レバレッジを効かせた投資・仲介業で最大の富を築きます。',
+        '司禄': '【蓄積型】短期より長期で資産形成。サブスク・会員制など継続収入モデルで安定的に成功します。',
+        '車騎': '【行動型】考えるより動く。スピード重視で即断即決、PDCAを高速で回すことで結果を出します。',
+        '牽牛': '【権威型】ブランド価値と社会的信用が武器。資格や実績を積み上げ、高単価で勝負するタイプです。',
+        '龍高': '【革新型】現状維持は衰退。常に新しい技術や市場に挑戦し、変化の最前線で才能が開花します。',
+        '玉堂': '【教育型】知識を体系化して人に伝えることで収益化。コンサルティングや教育事業が適職です。'
+    };
+
+    // 向いている仕事
+    const SUITABLE_JOBS = {
+        '貫索': '<ul><li>フリーランスエンジニア・デザイナー</li><li>個人コンサルタント・専門家</li><li>職人（料理人、工芸家など）</li><li>士業（税理士、弁護士など）</li><li>一人で完結する専門職</li></ul>',
+        '石門': '<ul><li>組織マネージャー・人事</li><li>人材育成・研修講師</li><li>コミュニティ運営・イベント企画</li><li>ネットワークビジネス</li><li>PR・広報担当</li></ul>',
+        '鳳閣': '<ul><li>YouTuber・TikToker・インフルエンサー</li><li>ブロガー・ライター</li><li>飲食店経営</li><li>MC・司会業</li><li>エンターテイメント関連</li></ul>',
+        '調舒': '<ul><li>デザイナー（グラフィック・Web・ファッション）</li><li>作家・小説家・脚本家</li><li>画家・イラストレーター</li><li>ハンドメイド作家</li><li>音楽家・作曲家</li></ul>',
+        '禄存': '<ul><li>投資家（株式・不動産・FX）</li><li>事業プロデューサー</li><li>M&Aアドバイザー</li><li>不動産仲介・投資</li><li>金融コンサルタント</li></ul>',
+        '司禄': '<ul><li>サブスクリプションビジネス</li><li>会員制サービス運営</li><li>不動産オーナー</li><li>ブログ・アフィリエイト（長期）</li><li>印税ビジネス</li></ul>',
+        '車騎': '<ul><li>営業（保険・不動産・車など）</li><li>トレーダー（株・FX・仮想通貨）</li><li>転売・せどり</li><li>イベント企画・運営</li><li>スポーツビジネス</li></ul>',
+        '牽牛': '<ul><li>弁護士・税理士・会計士</li><li>医師・歯科医師</li><li>企業経営者・役員</li><li>ブランドコンサルタント</li><li>高級サービス業</li></ul>',
+        '龍高': '<ul><li>ITエンジニア・プログラマー</li><li>AI・データサイエンティスト</li><li>海外ビジネス・貿易</li><li>新規事業開発</li><li>スタートアップ起業</li></ul>',
+        '玉堂': '<ul><li>研修講師・セミナー講師</li><li>コンサルタント</li><li>学習塾経営</li><li>オンライン講座運営</li><li>ビジネスコーチ</li></ul>'
+    };
+
+    // 成功戦略
+    const SUCCESS_STRATEGY = {
+        '貫索': '<ul><li>専門性を極める：広く浅くより、狭く深く</li><li>独立を目指す：会社員でも「社内フリーランス」的立ち位置を</li><li>単価を上げる：量より質で勝負</li><li>自分ブランドを確立：○○といえばあなた、を目指す</li></ul>',
+        '石門': '<ul><li>人脈を最大の資産に：知り合いの数=ビジネスチャンス</li><li>Win-Winの関係構築：ギブアンドテイクを意識</li><li>コミュニティを作る：Facebook、Discord、LINEグループなど</li><li>紹介システムを構築：口コミが広がる仕組みづくり</li></ul>',
+        '鳳閣': '<ul><li>楽しさを仕事に：趣味の延長で稼ぐ</li><li>SNSを最大限活用：フォロワー=資産</li><li>エンタメ要素を入れる：面白い=バズる</li><li>自然体を貫く：無理に格好つけない</li></ul>',
+        '調舒': '<ul><li>ニッチを攻める：100人の熱狂的ファン＞10,000人の薄いファン</li><li>世界観を確立：あなたにしか作れないものを</li><li>高単価で売る：安売りしない</li><li>作品を資産化：ストック型収入を構築</li></ul>',
+        '禄存': '<ul><li>レバレッジを効かせる：自分の時間を売らない</li><li>仲介・プロデュースで稼ぐ：人とお金をつなぐ</li><li>複数の収入源を持つ：リスク分散</li><li>お金にお金を稼がせる：投資で資産形成</li></ul>',
+        '司禄': '<ul><li>ストック型収入を構築：毎月自動で入る仕組み</li><li>信頼を積み上げる：長期的な顧客関係</li><li>継続率を上げる：解約率を下げる工夫</li><li>複利の力を活用：時間を味方につける</li></ul>',
+        '車騎': '<ul><li>スピード重視：考える時間を減らし行動回数を増やす</li><li>PDCAを高速で回す：失敗してもすぐ修正</li><li>短期目標を設定：1ヶ月単位で成果を出す</li><li>現場主義：データより実践</li></ul>',
+        '牽牛': '<ul><li>ブランドを確立：○○といえばあなた</li><li>資格・実績を積む：権威性を高める</li><li>高単価路線：安売りしない</li><li>メディア露出：知名度を上げる</li></ul>',
+        '龍高': '<ul><li>最新トレンドを追う：誰よりも早く新技術を習得</li><li>海外に目を向ける：日本だけで完結しない</li><li>常に学習：毎日1つ新しいことを学ぶ</li><li>リスクを取る：安定より成長を選ぶ</li></ul>',
+        '玉堂': '<ul><li>知識を体系化：誰でも理解できる形にする</li><li>教えることで稼ぐ：情報商材・講座販売</li><li>ストック型コンテンツ：一度作れば何度も売れる</li><li>権威性を確立：専門家として認知される</li></ul>'
+    };
+
+    // 失敗パターン
+    const FAILURE_PATTERN = {
+        '貫索': '<ul><li>組織に合わせすぎてストレスを溜める</li><li>人に頼らず抱え込みすぎる</li><li>頑固さが災いしてチャンスを逃す</li><li>収入の不安定さに耐えきれず妥協する</li></ul>',
+        '石門': '<ul><li>一人でビジネスを始めて孤独に耐えられない</li><li>人間関係のトラブルに巻き込まれる</li><li>誰とでも仲良くしようとして疲弊する</li><li>利益より関係性を優先しすぎる</li></ul>',
+        '鳳閣': '<ul><li>真面目すぎて面白みがなくなる</li><li>楽しさを追求しすぎて収益化できない</li><li>流行に流されすぎる</li><li>ブランディングがブレる</li></ul>',
+        '調舒': '<ul><li>大衆受けを狙って個性を失う</li><li>完璧主義で作品を出せない</li><li>安売りしすぎて価値を下げる</li><li>感性だけでビジネス視点が欠ける</li></ul>',
+        '禄存': '<ul><li>小さく考えてチャンスを逃す</li><li>欲張りすぎてリスクを取りすぎる</li><li>人間関係のトラブルでビジネスが止まる</li><li>派手な生活で浪費する</li></ul>',
+        '司禄': '<ul><li>短期的な利益を追って失敗</li><li>慎重すぎてチャンスを逃す</li><li>変化を恐れて時代遅れになる</li><li>安定に甘んじて成長が止まる</li></ul>',
+        '車騎': '<ul><li>考えすぎて動けなくなる</li><li>計画性がなく行き当たりばったり</li><li>短気で人間関係を壊す</li><li>長期視点が欠けて継続できない</li></ul>',
+        '牽牛': '<ul><li>プライドが高すぎて柔軟性を失う</li><li>見栄を張りすぎて散財</li><li>肩書きにこだわりすぎて実力が伴わない</li><li>批判を気にしすぎて動けない</li></ul>',
+        '龍高': '<ul><li>新しいものに飛びつきすぎて継続できない</li><li>変化を求めすぎて落ち着かない</li><li>基礎を疎かにして失敗</li><li>一つのことを極められない</li></ul>',
+        '玉堂': '<ul><li>知識をため込んで出さない</li><li>完璧主義で教材が完成しない</li><li>論理的すぎて初心者に伝わらない</li><li>無料で教えすぎて収益化できない</li></ul>'
+    };
+
+    // 年収アップの秘訣
+    const INCOME_STRATEGY = {
+        '貫索': '時給思考から単価思考へ。月30万円なら5万円の案件×6件、または30万円の案件×1件を目指しましょう。量ではなく質と単価を上げることに集中してください。',
+        '石門': '人脈×レバレッジ=収入。オンラインサロン（100人×3,000円=30万円）、紹介報酬（20万円）、コンサル（2件×5万円）など、人を集め動かすことで収入が増えます。',
+        '鳳閣': 'フォロワー数×マネタイズ。YouTube広告（10万円）、企業案件（15万円）、アフィリエイト（5万円）で月30万円。または飲食店で固定客100人×客単価3,000円×10回=300万円。',
+        '調舒': '作品単価×販売数×継続収入。ハンドメイド作品5万円×10点=50万円、デザイン高単価案件2件×25万円=50万円、またはサブスク500人×1,000円=50万円を目指しましょう。',
+        '禄存': '元手×利回り×回転数。不動産投資で家賃収入50万円、株式投資で配当+売買益30万円、プロデュース報酬20万円で月100万円。大きな資金を動かすほど収入が増えます。',
+        '司禄': '継続収入×顧客数×継続年数。サブスク500人×1,000円=50万円、不動産アパート1棟で家賃50万円、会員制100人×5,000円=50万円。時間が経つほど収入が増える仕組みを作りましょう。',
+        '車騎': '行動量×成約率×単価。営業なら10件訪問×成約率20%×単価25万円=50万円、トレードなら日2万円×25営業日=50万円、転売なら100商品×利益5,000円=50万円。行動量を増やせば稼げます。',
+        '牽牛': '権威性×単価×顧客数。士業で顧問契約20社×5万円=100万円、高級コンサル月4件×25万円=100万円、企業研修月2回×50万円=100万円。ブランド価値を高めるほど単価が上がります。',
+        '龍高': '新技術×希少性×需要。AI開発エンジニアとして月80万円、海外向けSaaS月額$50×1,600人=$80,000、Web3エンジニアでプロジェクト報酬月80万円。新しい分野ほど高単価です。',
+        '玉堂': '知識×受講生数×単価。オンライン講座300人×2,000円/月=60万円、企業研修月3回×20万円=60万円、コンサル月6件×10万円=60万円。知識が資産になります。'
+    };
+
+    // 相性の良いパートナー
+    const COMPATIBILITY = {
+        '貫索': [
+            { type: '石門星', reason: '独立性×社交性で補完関係' },
+            { type: '司禄星', reason: '専門性×安定性で強固な基盤' },
+            { type: '鳳閣星', reason: '職人×表現で相乗効果' }
+        ],
+        '石門': [
+            { type: '貫索星', reason: '社交性×専門性で最強タッグ' },
+            { type: '車騎星', reason: '企画×実行で即戦力' },
+            { type: '禄存星', reason: '人脈×資金で大型案件' }
+        ],
+        '鳳閣': [
+            { type: '調舒星', reason: '表現×創造で芸術的コンテンツ' },
+            { type: '車騎星', reason: 'アイデア×行動力で即展開' },
+            { type: '石門星', reason: '発信×人脈で拡散力アップ' }
+        ],
+        '調舒': [
+            { type: '鳳閣星', reason: '創造×伝達で作品が届く' },
+            { type: '牽牛星', reason: '芸術×ブランドで高付加価値' },
+            { type: '玉堂星', reason: '感性×論理で完成度アップ' }
+        ],
+        '禄存': [
+            { type: '石門星', reason: '資金×人脈で大規模展開' },
+            { type: '龍高星', reason: '投資×革新で未来型ビジネス' },
+            { type: '牽牛星', reason: '財×権威で社会的成功' }
+        ],
+        '司禄': [
+            { type: '貫索星', reason: '安定×専門性で長期成功' },
+            { type: '玉堂星', reason: '蓄積×教育で継続収入' },
+            { type: '牽牛星', reason: '信頼×権威で盤石な基盤' }
+        ],
+        '車騎': [
+            { type: '石門星', reason: '行動×人脈で即成果' },
+            { type: '鳳閣星', reason: 'スピード×表現で話題性' },
+            { type: '龍高星', reason: '実行×革新で市場開拓' }
+        ],
+        '牽牛': [
+            { type: '司禄星', reason: '権威×安定で社会的信用' },
+            { type: '禄存星', reason: 'ブランド×財で高級路線' },
+            { type: '調舒星', reason: '名誉×芸術で文化的価値' }
+        ],
+        '龍高': [
+            { type: '禄存星', reason: '革新×投資で最先端ビジネス' },
+            { type: '車騎星', reason: '変化×行動で新市場制覇' },
+            { type: '玉堂星', reason: '習得×知識で専門性の深化' }
+        ],
+        '玉堂': [
+            { type: '司禄星', reason: '教育×蓄積で長期資産' },
+            { type: '龍高星', reason: '知識×革新で最新情報' },
+            { type: '牽牛星', reason: '論理×権威で信頼性アップ' }
+        ]
+    };
+
+    // 成功事例
+    const SUCCESS_CASE = {
+        '貫索': 'フリーランスエンジニアとして独立後、特定分野（AI開発）に特化することで月収80万円を達成。顧客からの信頼も厚く、紹介だけで仕事が回るように。',
+        '石門': 'オンラインサロンを立ち上げ、会員300人で月商90万円。さらにアフィリエイト紹介報酬と法人コンサルで月収150万円を実現。人脈が最大の資産に。',
+        '鳳閣': 'グルメ系YouTuberとして登録者10万人を達成。企業案件月5本で50万円、広告収入20万円、自社商品販売30万円で月収100万円超え。',
+        '調舒': 'ハンドメイドアクセサリー作家として、Instagram経由で月商80万円。ファン100人のリピート購入で安定収入。展示会でも完売続出。',
+        '禄存': '不動産投資で3棟のアパート経営。月の家賃収入150万円。さらにM&Aアドバイザーとして成功報酬で年収3,000万円超え。',
+        '司禄': '月額制オンライン講座を運営し、受講生500人で月収100万円。3年継続で累計3,600万円の安定収入を構築。',
+        '車騎': '保険営業でトップセールスを達成。月間50件の訪問で成約率25%、平均単価8万円で月収100万円。社内MVPを3年連続受賞。',
+        '牽牛': '税理士として独立開業。顧問先50社を抱え月収200万円。セミナー講師としても活動し、権威性を確立。著書も出版。',
+        '龍高': 'AIエンジニアとして最新技術を習得。フリーランスで月収150万円。海外案件も受注し、年収2,000万円を突破。',
+        '玉堂': 'ビジネスコンサルタントとして、オンライン講座とコンサルティングで月収120万円。受講生は累計2,000人を超える。'
+    };
+
+    // おすすめの学び
+    const RECOMMENDED_LEARNING = {
+        '貫索': '<ul><li>専門スキルの深化（プログラミング、デザインなど）</li><li>時間管理術</li><li>個人ブランディング</li><li>フリーランス向け営業術</li></ul>',
+        '石門': '<ul><li>コミュニケーションスキル</li><li>SNSマーケティング</li><li>コミュニティ運営術</li><li>人脈構築の技術</li></ul>',
+        '鳳閣': '<ul><li>動画編集・撮影技術</li><li>コンテンツマーケティング</li><li>ストーリーテリング</li><li>SNS運用テクニック</li></ul>',
+        '調舒': '<ul><li>デザインソフト（Photoshop、Illustratorなど）</li><li>ブランディング戦略</li><li>価格設定の心理学</li><li>作品販売プラットフォーム活用</li></ul>',
+        '禄存': '<ul><li>投資の基礎（株式、不動産、FX）</li><li>財務・会計知識</li><li>交渉術</li><li>大型プロジェクトマネジメント</li></ul>',
+        '司禄': '<ul><li>サブスクリプションビジネスモデル</li><li>顧客維持戦略</li><li>長期資産形成</li><li>契約・継続の仕組み化</li></ul>',
+        '車騎': '<ul><li>営業トーク術</li><li>クロージング技術</li><li>トレード手法（テクニカル分析）</li><li>高速PDCA実践法</li></ul>',
+        '牽牛': '<ul><li>資格取得（士業など）</li><li>パーソナルブランディング</li><li>プレゼンテーション技術</li><li>メディア露出戦略</li></ul>',
+        '龍高': '<ul><li>最新技術（AI、Web3、ブロックチェーン）</li><li>英語・海外ビジネス</li><li>スタートアップ経営</li><li>イノベーション思考</li></ul>',
+        '玉堂': '<ul><li>教授法・ファシリテーション</li><li>コンサルティング手法</li><li>オンライン講座の作り方</li><li>知識の体系化・図解化</li></ul>'
+    };
+
+    // ラッキーカラー
+    const LUCKY_COLOR = {
+        '貫索': { color: '#228b22', name: '緑（成長と独立の色）' },
+        '石門': { color: '#ffa500', name: 'オレンジ（社交と協調の色）' },
+        '鳳閣': { color: '#ff0000', name: '赤（情熱と表現の色）' },
+        '調舒': { color: '#9370db', name: '紫（創造と芸術の色）' },
+        '禄存': { color: '#ffd700', name: '金（財運と繁栄の色）' },
+        '司禄': { color: '#8b4513', name: '茶（安定と蓄積の色）' },
+        '車騎': { color: '#ff4500', name: 'オレンジレッド（行動とスピードの色）' },
+        '牽牛': { color: '#c0c0c0', name: '銀（名誉と権威の色）' },
+        '龍高': { color: '#00bfff', name: '青（革新と未来の色）' },
+        '玉堂': { color: '#4169e1', name: 'ロイヤルブルー（知恵と論理の色）' }
+    };
+    
+    // 六十干支
+    function getKanshi(index) {
+        return {
+            kan: TENKAN[index % 10],
+            shi: CHISHI[index % 12]
         };
-        const STAR_MAP = {
-            '甲': { '甲':'貫索', '乙':'石門', '丙':'鳳閣', '丁':'調舒', '戊':'禄存', '己':'司禄', '庚':'車騎', '辛':'牽牛', '壬':'龍高', '癸':'玉堂' },
-            '乙': { '乙':'貫索', '甲':'石門', '丁':'鳳閣', '丙':'調舒', '己':'禄存', '戊':'司禄', '辛':'車騎', '庚':'牽牛', '癸':'龍高', '壬':'玉堂' },
-            '丙': { '丙':'貫索', '丁':'石門', '戊':'鳳閣', '己':'調舒', '庚':'禄存', '辛':'司禄', '壬':'車騎', '癸':'牽牛', '甲':'龍高', '乙':'玉堂' },
-            '丁': { '丁':'貫索', '丙':'石門', '己':'鳳閣', '戊':'調舒', '辛':'禄存', '庚':'司禄', '癸':'車騎', '壬':'牽牛', '乙':'龍高', '甲':'玉堂' },
-            '戊': { '戊':'貫索', '己':'石門', '庚':'鳳閣', '辛':'調舒', '壬':'禄存', '癸':'司禄', '甲':'車騎', '乙':'牽牛', '丙':'龍高', '丁':'玉堂' },
-            '己': { '己':'貫索', '戊':'石門', '辛':'鳳閣', '庚':'調舒', '癸':'禄存', '壬':'司禄', '乙':'車騎', '甲':'牽牛', '丁':'龍高', '丙':'玉堂' },
-            '庚': { '庚':'貫索', '辛':'石門', '壬':'鳳閣', '癸':'調舒', '甲':'禄存', '乙':'司禄', '丙':'車騎', '丁':'牽牛', '戊':'龍高', '己':'玉堂' },
-            '辛': { '辛':'貫索', '庚':'石門', '癸':'鳳閣', '壬':'調舒', '乙':'禄存', '甲':'司禄', '丁':'車騎', '丙':'牽牛', '己':'龍高', '戊':'玉堂' },
-            '壬': { '壬':'貫索', '癸':'石門', '甲':'鳳閣', '乙':'調舒', '丙':'禄存', '丁':'司禄', '戊':'車騎', '己':'牽牛', '庚':'龍高', '辛':'玉堂' },
-            '癸': { '癸':'貫索', '壬':'石門', '乙':'鳳閣', '甲':'調舒', '丁':'禄存', '丙':'司禄', '己':'車騎', '戊':'牽牛', '辛':'龍高', '庚':'玉堂' }
-        };
-        const DESCS = {
-            '貫索': '【独立独歩】専門性を極める職人・フリーランス向き。信念を貫くことで道が開けます。',
-            '石門': '【組織構築】チーム作りや人脈作り。仲間と協力し、大きな目的を達成するリーダー。',
-            '鳳閣': '【伝達・表現】遊び心と客観性。メディア、飲食、情報発信など、楽しさを伝える仕事が天職。',
-            '調舒': '【創造・感性】独特の感性を持つアーティスト。孤独を恐れず、唯一無二の価値を創り出す。',
-            '禄存': '【投資・回転】愛と財の星。人を惹きつけ、大きなお金を動かして社会に還元する才能。',
-            '司禄': '【蓄積・堅実】信頼の星。一歩ずつ着実に積み上げるサブスク型ビジネスや管理職。',
-            '車騎': '【行動・スピード】考えるより動く。即断即決の営業や勝負の世界で真価を発揮します。',
-            '牽牛': '【名誉・自尊心】責任感の強いエリート。ブランド、資格、士業など、信頼を売る仕事。',
-            '龍高': '【改革・習得】知的好奇心と放浪の星。IT、海外、ベンチャーなど変化の激しい環境で爆発。',
-            '玉堂': '【教育・論理】伝統と知恵の星。コンサル、講師、研究職など、体系立てて教える専門家。'
-        };
-
-        function runDiagnostic() {
-            const dateVal = document.getElementById('birthdate').value;
-            if(!dateVal) return;
-            const b = new Date(dateVal);
-            
-            const y = b.getFullYear();
-            const nKan = TENKAN[(y - 1984 + 60000) % 10];
-            const mKan = TENKAN[(b.getMonth() + 1 + 2) % 10];
-            const diff = Math.floor((b - new Date(2000, 0, 1)) / 86400000);
-            const dKan = TENKAN[(2 + diff % 10 + 10) % 10];
-            
-            const sNen = STAR_MAP[dKan][nKan];
-            const sGek = STAR_MAP[dKan][mKan];
-
-            document.getElementById('nenKan').innerText = nKan;
-            document.getElementById('gekkanKan').innerText = mKan;
-            document.getElementById('nicchiKan').innerText = dKan;
-            document.getElementById('starNen').innerText = sNen + '星';
-            document.getElementById('starGekkan').innerText = sGek + '星';
-            
-            const lucky = LUCKY_COLORS[dKan];
-            const title = document.getElementById('mainStarTitle');
-            title.innerText = sGek + '星のあなたの戦略';
-            title.style.color = lucky.code;
-            title.style.borderColor = lucky.code;
-            
-            document.getElementById('colorDot').style.backgroundColor = lucky.code;
-            document.getElementById('colorName').innerText = lucky.name;
-            document.getElementById('starDescription').innerText = DESCS[sGek];
-
-            document.getElementById('resultSection').style.display = 'block';
+    }
+    
+    // 年柱の算出
+    function getNenchu(year) {
+        const base = 1984;
+        const index = (year - base + 60000) % 60;
+        return getKanshi(index);
+    }
+    
+    // 月柱の算出
+    function getGekkan(year, month) {
+        const nenKan = getNenchu(year).kan;
+        const nenKanIndex = TENKAN.indexOf(nenKan);
+        const monthBranch = MONTH_BRANCHES[month - 1];
+        
+        let monthKanIndex;
+        if (nenKanIndex === 0 || nenKanIndex === 5) {
+            monthKanIndex = (monthBranch * 2 + 2) % 10;
+        } else if (nenKanIndex === 1 || nenKanIndex === 6) {
+            monthKanIndex = (monthBranch * 2 + 4) % 10;
+        } else if (nenKanIndex === 2 || nenKanIndex === 7) {
+            monthKanIndex = (monthBranch * 2 + 6) % 10;
+        } else if (nenKanIndex === 3 || nenKanIndex === 8) {
+            monthKanIndex = (monthBranch * 2 + 8) % 10;
+        } else {
+            monthKanIndex = (monthBranch * 2) % 10;
         }
-    </script>
+        
+        return {
+            kan: TENKAN[monthKanIndex],
+            shi: CHISHI[monthBranch]
+        };
+    }
+    
+    // 日柱の算出
+    function getNicchi(year, month, day) {
+        const baseDate = new Date(2000, 0, 1);
+        const targetDate = new Date(year, month - 1, day);
+        const diffDays = Math.floor((targetDate - baseDate) / (1000 * 60 * 60 * 24));
+        const index = (52 + diffDays + 60000) % 60;
+        return getKanshi(index);
+    }
+    
+    function runDiagnostic() {
+        const birthdate = document.getElementById('birthdate').value;
+        
+        if (!birthdate) {
+            alert('生年月日を入力してください。');
+            return;
+        }
+        
+        const date = new Date(birthdate);
+        const year = date.getFullYear();
+        const month = date.getMonth() + 1;
+        const day = date.getDate();
+        
+        // 各柱の算出
+        const nenchu = getNenchu(year);
+        const gekkan = getGekkan(year, month);
+        const nicchi = getNicchi(year, month, day);
+        
+        // 結果の表示
+        document.getElementById('nenKan').textContent = nenchu.kan;
+        document.getElementById('gekkanKan').textContent = gekkan.kan;
+        document.getElementById('nicchiKan').textContent = nicchi.kan;
+        
+        // 十大主星の算出
+        const starNen = STAR_MAP[nicchi.kan][nenchu.kan];
+        const starGekkan = STAR_MAP[nicchi.kan][gekkan.kan];
+        
+        document.getElementById('starNen').textContent = starNen + '星';
+        document.getElementById('starGekkan').textContent = starGekkan + '星';
+        
+        // 詳細情報の表示
+        document.getElementById('mainStarTitle').textContent = `💼 あなたの中心星：${starGekkan}星`;
+        document.getElementById('starBasicDesc').textContent = STAR_BASIC[starGekkan];
+        
+        // ラッキーカラー
+        document.getElementById('luckyColor').style.backgroundColor = LUCKY_COLOR[starGekkan].color;
+        document.getElementById('colorName').textContent = LUCKY_COLOR[starGekkan].name;
+        
+        // その他の情報
+        document.getElementById('businessType').textContent = BUSINESS_TYPE[starGekkan];
+        document.getElementById('suitableJobs').innerHTML = SUITABLE_JOBS[starGekkan];
+        document.getElementById('successStrategy').innerHTML = SUCCESS_STRATEGY[starGekkan];
+        document.getElementById('failurePattern').innerHTML = FAILURE_PATTERN[starGekkan];
+        document.getElementById('incomeStrategy').textContent = INCOME_STRATEGY[starGekkan];
+        document.getElementById('successCase').textContent = SUCCESS_CASE[starGekkan];
+        document.getElementById('recommendedLearning').innerHTML = RECOMMENDED_LEARNING[starGekkan];
+        
+        // 相性表示
+        const compatibilityHTML = COMPATIBILITY[starGekkan]
+            .map(item => `
+                <div class="compatibility-item">
+                    <strong>${item.type}</strong>
+                    <div style="color: #4a5568; font-size: 0.95em; margin-top: 5px;">${item.reason}</div>
+                </div>
+            `).join('');
+        document.getElementById('compatibility').innerHTML = compatibilityHTML;
+        
+        // 結果セクションを表示
+        document.getElementById('resultSection').classList.add('show');
+        
+        // 結果までスクロール
+        document.getElementById('resultSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    
+    // デフォルト値の設定
+    window.onload = function() {
+        const today = new Date();
+        const dateStr = today.toISOString().split('T')[0];
+        document.getElementById('birthdate').value = dateStr;
+    };
+</script>
+```
+
 </body>
 </html>
