@@ -3,128 +3,140 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ビジネス統計学・適性診断ツール</title>
+    <title>ビジネス統計学・適性診断</title>
     
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="ビジネス診断">
-    
+
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { 
             font-family: 'Hiragino Sans', 'Meiryo', sans-serif; 
             background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d); 
             min-height: 100vh; 
-            padding: 20px; 
-            color: #2d3748;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
         .container { 
-            max-width: 600px; 
-            margin: 0 auto; 
-            background: rgba(255, 255, 255, 0.95); 
-            border-radius: 24px; 
-            padding: 30px; 
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3); 
+            max-width: 500px; 
+            width: 100%;
+            background: rgba(255, 255, 255, 0.98); 
+            border-radius: 30px; 
+            padding: 40px 30px; 
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5); 
         }
-        h1 { text-align: center; font-size: 1.5rem; margin-bottom: 8px; }
-        .subtitle { text-align: center; color: #718096; font-size: 0.9rem; margin-bottom: 25px; }
+        h1 { text-align: center; color: #2d3748; font-size: 1.6rem; margin-bottom: 5px; }
+        .subtitle { text-align: center; color: #718096; font-size: 0.85rem; margin-bottom: 30px; }
         
         .input-section { 
-            background: #f7fafc; 
-            padding: 20px; 
-            border-radius: 15px; 
-            margin-bottom: 25px; 
-            border: 1px solid #e2e8f0;
+            background: #f8fafc; 
+            padding: 25px; 
+            border-radius: 20px; 
+            margin-bottom: 30px;
+            border: 1px solid #edf2f7;
         }
-        label { display: block; font-weight: bold; margin-bottom: 8px; font-size: 0.9rem; }
+        label { display: block; font-weight: bold; margin-bottom: 10px; color: #4a5568; }
         input[type="date"] { 
             width: 100%; 
-            padding: 12px; 
-            border-radius: 10px; 
-            border: 2px solid #cbd5e0; 
-            font-size: 1rem;
-            margin-bottom: 15px;
+            padding: 15px; 
+            border-radius: 12px; 
+            border: 2px solid #e2e8f0; 
+            font-size: 1.1rem;
+            margin-bottom: 20px;
+            outline: none;
+            transition: 0.3s;
         }
+        input[type="date"]:focus { border-color: #1a2a6c; }
         
         .calculate-btn { 
             width: 100%; 
-            padding: 18px; 
-            background: #2d3748; 
+            padding: 20px; 
+            background: linear-gradient(to right, #1a2a6c, #b21f1f);
             color: white; 
             border: none; 
-            border-radius: 12px; 
-            font-size: 1.1em; 
-            font-weight: bold; 
-            cursor: pointer; 
-            transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
-        }
-        .calculate-btn:hover { background: #000; transform: translateY(-2px); }
-        .calculate-btn:active { transform: translateY(0); }
-
-        /* 結果セクションのアニメーション用 */
-        #resultSection { 
-            display: none; 
-            opacity: 0; 
-            transform: translateY(20px); 
-            transition: all 0.6s ease-out; 
-        }
-
-        .meishiki-table { width: 100%; border-collapse: separate; border-spacing: 4px; margin: 20px 0; }
-        .meishiki-table th { background: #2d3748; color: white; padding: 10px; border-radius: 6px; font-size: 0.8rem; }
-        .meishiki-table td { 
-            padding: 15px; 
-            text-align: center; 
-            background: white; 
-            border: 1px solid #e2e8f0; 
-            border-radius: 8px;
+            border-radius: 15px; 
             font-size: 1.2rem; 
             font-weight: bold; 
+            cursor: pointer; 
+            transition: 0.4s;
+            box-shadow: 0 10px 20px rgba(178, 31, 31, 0.3);
         }
-        .label-cell { background: #edf2f7 !important; font-size: 0.8rem !important; color: #4a5568; width: 60px; }
-        .star-cell { color: #e53e3e; background: #fffaf0; }
-        .main-star { 
-            background: #fff5f5 !important; 
-            border: 3px solid #e53e3e !important; 
+        .calculate-btn:hover { transform: translateY(-3px); box-shadow: 0 15px 25px rgba(178, 31, 31, 0.4); }
+
+        #resultSection { 
+            display: none; 
+            animation: fadeInUp 0.8s ease-out forwards;
+        }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .meishiki-table { width: 100%; border-collapse: separate; border-spacing: 5px; margin: 25px 0; }
+        .meishiki-table th { background: #2d3748; color: white; padding: 12px; border-radius: 8px; font-size: 0.75rem; }
+        .meishiki-table td { 
+            padding: 20px 10px; 
+            text-align: center; 
+            background: white; 
+            border: 1px solid #edf2f7; 
+            border-radius: 12px;
+            font-size: 1.4rem; 
+            font-weight: bold;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+        }
+        .label-cell { background: #f1f5f9 !important; font-size: 0.8rem !important; color: #64748b; width: 20%; }
+        .star-cell { color: #e53e3e; }
+        
+        .main-star-box {
+            background: #fff5f5 !important;
+            border: 3px solid #e53e3e !important;
             position: relative;
         }
-        .main-star::after {
-            content: "中心星";
+        .main-star-label {
             position: absolute;
-            top: -10px;
+            top: -12px;
             left: 50%;
             transform: translateX(-50%);
             background: #e53e3e;
             color: white;
             font-size: 10px;
-            padding: 2px 6px;
-            border-radius: 10px;
+            padding: 2px 8px;
+            border-radius: 20px;
+            white-space: nowrap;
         }
 
         .info-box { 
             background: #ffffff; 
-            border-left: 5px solid #2d3748; 
-            padding: 20px; 
-            margin-top: 20px; 
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            border-radius: 15px;
+            padding: 25px; 
+            margin-top: 25px; 
+            border: 1px solid #edf2f7;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
         }
-        .lucky-badge {
-            display: inline-block;
-            padding: 4px 12px;
-            border-radius: 20px;
-            color: white;
-            font-size: 0.8rem;
-            margin-top: 10px;
+        .info-box h3 { font-size: 1.1rem; margin-bottom: 10px; border-bottom: 2px solid; display: inline-block; }
+        .info-box p { font-size: 1rem; line-height: 1.7; color: #4a5568; }
+
+        .lucky-color-box {
+            margin-top: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.9rem;
+            font-weight: bold;
         }
+        .color-dot { width: 20px; height: 20px; border-radius: 50%; border: 1px solid #ddd; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>📊 ビジネス適性統計診断</h1>
-        <p class="subtitle">~ 帝王学データに基づく戦略的自己分析 ~</p>
+        <p class="subtitle">~ 戦略的な自己分析のための帝王学データ ~</p>
         
         <div class="input-section">
-            <label>あなたの生年月日</label>
+            <label>生年月日を選択</label>
             <input type="date" id="birthdate">
             <button class="calculate-btn" onclick="runDiagnostic()">統計データを抽出する</button>
         </div>
@@ -149,31 +161,36 @@
                     <tr>
                         <td class="label-cell">主星</td>
                         <td class="star-cell" id="starNen"></td>
-                        <td class="star-cell main-star" id="starGekkan"></td>
-                        <td class="star-cell" style="font-size: 0.9rem; color: #718096;">本人</td>
+                        <td class="star-cell main-star-box" id="starGekkanCell">
+                            <span class="main-star-label">中心星</span>
+                            <span id="starGekkan"></span>
+                        </td>
+                        <td class="star-cell" style="font-size: 0.8rem; color: #cbd5e0;">本人</td>
                     </tr>
                 </tbody>
             </table>
             
             <div class="info-box">
                 <h3 id="mainStarTitle">あなたの中心星</h3>
-                <p id="starDescription" style="margin: 12px 0; line-height: 1.6; font-weight: bold;"></p>
-                <div id="luckyColorBadge" class="lucky-badge"></div>
+                <p id="starDescription"></p>
+                <div class="lucky-color-box">
+                    <span>ラッキーカラー:</span>
+                    <div id="colorDot" class="color-dot"></div>
+                    <span id="colorName"></span>
+                </div>
             </div>
         </div>
     </div>
 
     <script>
         const TENKAN = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸'];
-        
         const LUCKY_COLORS = {
-            '甲': { name: '深緑', code: '#2F855A' }, '乙': { name: '若草色', code: '#48BB78' },
-            '丙': { name: '赤', code: '#E53E3E' }, '丁': { name: '灯火色', code: '#F56565' },
-            '戊': { name: '黄金色', code: '#D69E2E' }, '己': { name: '黄色', code: '#ECC94B' },
-            '庚': { name: '白金', code: '#718096' }, '辛': { name: '銀色', code: '#A0AEC0' },
-            '壬': { name: '紺青', code: '#2B6CB0' }, '癸': { name: '水色', code: '#4299E1' }
+            '甲': { name: '深緑（木）', code: '#2F855A' }, '乙': { name: '若草色（木）', code: '#48BB78' },
+            '丙': { name: '赤（火）', code: '#E53E3E' }, '丁': { name: '灯火色（火）', code: '#F56565' },
+            '戊': { name: '黄金色（土）', code: '#D69E2E' }, '己': { name: '黄色（土）', code: '#ECC94B' },
+            '庚': { name: '白金（金）', code: '#718096' }, '辛': { name: '銀色（金）', code: '#A0AEC0' },
+            '壬': { name: '紺青（水）', code: '#2B6CB0' }, '癸': { name: '水色（水）', code: '#4299E1' }
         };
-
         const STAR_MAP = {
             '甲': { '甲':'貫索', '乙':'石門', '丙':'鳳閣', '丁':'調舒', '戊':'禄存', '己':'司禄', '庚':'車騎', '辛':'牽牛', '壬':'龍高', '癸':'玉堂' },
             '乙': { '乙':'貫索', '甲':'石門', '丁':'鳳閣', '丙':'調舒', '己':'禄存', '戊':'司禄', '辛':'車騎', '庚':'牽牛', '癸':'龍高', '壬':'玉堂' },
@@ -186,26 +203,24 @@
             '壬': { '壬':'貫索', '癸':'石門', '甲':'鳳閣', '乙':'調舒', '丙':'禄存', '丁':'司禄', '戊':'車騎', '己':'牽牛', '庚':'龍高', '辛':'玉堂' },
             '癸': { '癸':'貫索', '壬':'石門', '乙':'鳳閣', '甲':'調舒', '丁':'禄存', '丙':'司禄', '己':'車騎', '戊':'牽牛', '辛':'龍高', '庚':'玉堂' }
         };
-
         const DESCS = {
-            '貫索': '【独立独歩】専門性を極める職人・フリーランス向き。自分のペースが大事。',
-            '石門': '【組織構築】チーム作りやコミュニティ運営。仲間と協力して成功するタイプ。',
-            '鳳閣': '【伝達・表現】インフルエンサー、メディア、飲食。楽しさを伝えるのが天職。',
-            '調舒': '【創造・感性】デザイナー、作家。唯一無二の世界観でファンを作る。',
-            '禄存': '【投資・回転】投資、プロデュース。大きなお金を動かして増やす。',
-            '司禄': '【蓄積・堅実】会員制、サブスク。着実に資産を積み上げるビジネス。',
-            '車騎': '【行動・スピード】営業、トレード。とにかく速く動くことで稼げる。',
-            '牽牛': '【名誉・権威】士業、ブランド。信頼と実績で高単価を狙う。',
-            '龍高': '【改革・IT】最新技術、海外。変化の激しい分野で才能が爆発。',
-            '玉堂': '【教育・論理】コンサル、講師。知識を体系化して教えるのが得意。'
+            '貫索': '【独立独歩】専門性を極める職人・フリーランス向き。信念を貫くことで道が開けます。',
+            '石門': '【組織構築】チーム作りや人脈作り。仲間と協力し、大きな目的を達成するリーダー。',
+            '鳳閣': '【伝達・表現】遊び心と客観性。メディア、飲食、情報発信など、楽しさを伝える仕事が天職。',
+            '調舒': '【創造・感性】独特の感性を持つアーティスト。孤独を恐れず、唯一無二の価値を創り出す。',
+            '禄存': '【投資・回転】愛と財の星。人を惹きつけ、大きなお金を動かして社会に還元する才能。',
+            '司禄': '【蓄積・堅実】信頼の星。一歩ずつ着実に積み上げるサブスク型ビジネスや管理職。',
+            '車騎': '【行動・スピード】考えるより動く。即断即決の営業や勝負の世界で真価を発揮します。',
+            '牽牛': '【名誉・自尊心】責任感の強いエリート。ブランド、資格、士業など、信頼を売る仕事。',
+            '龍高': '【改革・習得】知的好奇心と放浪の星。IT、海外、ベンチャーなど変化の激しい環境で爆発。',
+            '玉堂': '【教育・論理】伝統と知恵の星。コンサル、講師、研究職など、体系立てて教える専門家。'
         };
 
         function runDiagnostic() {
             const dateVal = document.getElementById('birthdate').value;
-            if(!dateVal) { alert("生年月日を選択してください"); return; }
+            if(!dateVal) return;
             const b = new Date(dateVal);
             
-            // 簡易万年暦ロジック
             const y = b.getFullYear();
             const nKan = TENKAN[(y - 1984 + 60000) % 10];
             const mKan = TENKAN[(b.getMonth() + 1 + 2) % 10];
@@ -215,32 +230,23 @@
             const sNen = STAR_MAP[dKan][nKan];
             const sGek = STAR_MAP[dKan][mKan];
 
-            // 値のセット
             document.getElementById('nenKan').innerText = nKan;
             document.getElementById('gekkanKan').innerText = mKan;
             document.getElementById('nicchiKan').innerText = dKan;
             document.getElementById('starNen').innerText = sNen + '星';
             document.getElementById('starGekkan').innerText = sGek + '星';
             
-            // ラッキーカラー反映
             const lucky = LUCKY_COLORS[dKan];
-            const mainStarTitle = document.getElementById('mainStarTitle');
-            mainStarTitle.innerText = '中心星：' + sGek + '星';
-            mainStarTitle.style.color = lucky.code;
+            const title = document.getElementById('mainStarTitle');
+            title.innerText = sGek + '星のあなたの戦略';
+            title.style.color = lucky.code;
+            title.style.borderColor = lucky.code;
             
-            const badge = document.getElementById('luckyColorBadge');
-            badge.innerText = 'ラッキーカラー: ' + lucky.name;
-            badge.style.backgroundColor = lucky.code;
-
+            document.getElementById('colorDot').style.backgroundColor = lucky.code;
+            document.getElementById('colorName').innerText = lucky.name;
             document.getElementById('starDescription').innerText = DESCS[sGek];
 
-            // アニメーション表示
-            const result = document.getElementById('resultSection');
-            result.style.display = 'block';
-            setTimeout(() => {
-                result.style.opacity = '1';
-                result.style.transform = 'translateY(0)';
-            }, 50);
+            document.getElementById('resultSection').style.display = 'block';
         }
     </script>
 </body>
