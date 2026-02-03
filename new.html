@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>ビジネス運勢占い</title>
+    <style>
+        /* CSS: デザインを整えます */
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f4f7f6;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+        }
+        h1 { color: #2c3e50; font-size: 1.5rem; }
+        #result-area {
+            margin: 20px 0;
+            padding: 15px;
+            border: 2px dashed #3498db;
+            border-radius: 8px;
+            min-height: 100px;
+        }
+        #fortune { font-size: 1.8rem; font-weight: bold; color: #e67e22; margin-bottom: 10px; }
+        #advice { font-size: 1rem; color: #7f8c8d; line-height: 1.5; }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 1rem;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        button:hover { background-color: #2980b9; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>今日のビジネス運勢</h1>
+    <div id="result-area">
+        <div id="fortune">？？？</div>
+        <div id="advice">ボタンを押して今日の指針を確認しましょう。</div>
+    </div>
+    <button onclick="getFortune()">占う！</button>
+</div>
+
+<script>
+    // JavaScript: 占いロジック
+    function getFortune() {
+        const results = [
+            { luck: "絶好調", advice: "新しいプロジェクトを提案するなら今日！自信を持って発言しましょう。" },
+            { luck: "着実", advice: "デスク周りの整理をすると効率アップ。午後の会議は聞き役に回ると吉。" },
+            { luck: "慎重に", advice: "メールの誤送信に注意。送信前に宛先をダブルチェックしましょう。" },
+            { luck: "人脈あり", advice: "疎遠になっていた同僚に連絡してみては？意外なヒントがもらえそう。" },
+            { luck: "休息が必要", advice: "今日は早めに帰宅してリフレッシュ。明日への投資と考えましょう。" }
+        ];
+
+        // ランダムに1つ選ぶ
+        const randomIndex = Math.floor(Math.random() * results.length);
+        const selected = results[randomIndex];
+
+        // 画面に表示する
+        document.getElementById('fortune').innerText = selected.luck;
+        document.getElementById('advice').innerText = selected.advice;
+    }
+</script>
+
+</body>
+</html>
