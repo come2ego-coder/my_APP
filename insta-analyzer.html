@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instagram投稿分析ツール</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: #f7f7f7;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            font-size: 28px;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 1024px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .panel {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .panel h2 {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #1a1a1a;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            font-size: 14px;
+            color: #555;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: border-color 0.2s;
+        }
+
+        input[type="text"]:focus,
+        input[type="number"]:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #4A90E2;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .file-upload {
+            border: 2px dashed #ddd;
+            border-radius: 8px;
+            padding: 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: #fafafa;
+        }
+
+        .file-upload:hover {
+            border-color: #4A90E2;
+            background: #f0f7ff;
+        }
+
+        .file-upload.active {
+            border-color: #4A90E2;
+            background: #f0f7ff;
+        }
+
+        .file-upload input[type="file"] {
+            display: none;
+        }
+
+        .file-upload-icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+
+        .file-info {
+            margin-top: 15px;
+            padding: 12px;
+            background: #e8f4f8;
+            border-radius: 6px;
+            font-size: 13px;
+            color: #2c5d7a;
+        }
+
+        button {
+            background: #4A90E2;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background: #357ABD;
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .analysis-result {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #4A90E2;
+        }
+
+        .analysis-section {
+            margin-bottom: 20px;
+        }
+
+        .analysis-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .analysis-section h3 {
+            font-size: 15px;
+            font-weight: 600;
+            color: #4A90E2;
+            margin-bottom: 8px;
+        }
+
+        .analysis-section p {
+            font-size: 14px;
+            line-height: 1.6;
+            color: #555;
+        }
+
+        .posts-list {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .post-card {
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            transition: all 0.2s;
+            cursor: pointer;
+            background: white;
+        }
+
+        .post-card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+
+        .post-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 12px;
+        }
+
+        .post-account {
+            font-weight: 600;
+            font-size: 16px;
+            color: #1a1a1a;
+        }
+
+        .post-stats {
+            font-size: 12px;
+            color: #888;
+        }
+
+        .post-url {
+            font-size: 13px;
+            color: #4A90E2;
+            text-decoration: none;
+            display: block;
+            margin-bottom: 12px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+< truncated lines 248-646 >
+
+                // AI構成分析
+                const loadingDiv = document.getElementById('analysisResult');
+                loadingDiv.style.display = 'block';
+                loadingDiv.innerHTML = `
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>構成を分析中...</p>
+                    </div>
+                `;
+
+                const analysis = await analyzeStructure(transcription);
+
+                // データ保存
+                const post = {
+                    id: Date.now(),
+                    accountName: accountName,
+                    url: document.getElementById('postUrl').value.trim(),
+                    followers: document.getElementById('followers').value,
+                    likes: document.getElementById('likes').value,
+                    transcription: transcription,
+                    analysis: analysis,
+                    createdAt: new Date().toISOString()
+                };
+
+                posts.unshift(post);
+                localStorage.setItem('instagramPosts', JSON.stringify(posts));
+
+                // 結果表示
+                displayAnalysisResult(analysis);
+                renderPosts();
+                
+                // フォームリセット
+                document.getElementById('accountName').value = '';
+                document.getElementById('postUrl').value = '';
+                document.getElementById('followers').value = '';
+                document.getElementById('likes').value = '';
+                document.getElementById('manualText').value = '';
+                document.getElementById('videoFile').value = '';
+                fileInfo.style.display = 'none';
+
+                alert('✅ 投稿を保存しました！');
+
+            } catch (error) {
+                console.error('エラー:', error);
+                alert('エラーが発生しました: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '分析して保存';
+            }
+        });
+
+        // 分析結果表示
+        function displayAnalysisResult(analysis) {
+            const resultDiv = document.getElementById('analysisResult');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = `
+                <div class="analysis-result">
+                    <h3 style="margin-bottom: 15px; color: #1a1a1a;">✨ 構成分析結果</h3>
+                    ${analysis.hook ? `
+                        <div class="analysis-section">
+                            <h3>🎣 フック</h3>
+                            <p>${analysis.hook}</p>
+                        </div>
+                    ` : ''}
+                    ${analysis.empathy ? `
+                        <div class="analysis-section">
+                            <h3>💭 共感ポイント</h3>
+                            <p>${analysis.empathy}</p>
+                        </div>
+                    ` : ''}
+                    ${analysis.problem ? `
+                        <div class="analysis-section">
+                            <h3>❓ 問題提起</h3>
+                            <p>${analysis.problem}</p>
+                        </div>
+                    ` : ''}
+                    ${analysis.solution ? `
+                        <div class="analysis-section">
+                            <h3>💡 ノウハウ・解決策</h3>
+                            <p>${analysis.solution}</p>
+                        </div>
+                    ` : ''}
+                    ${analysis.benefit ? `
+                        <div class="analysis-section">
+                            <h3>⭐ ベネフィット</h3>
+                            <p>${analysis.benefit}</p>
+                        </div>
+                    ` : ''}
+                    ${analysis.cta ? `
+                        <div class="analysis-section">
+                            <h3>📢 CTA（行動喚起）</h3>
+                            <p>${analysis.cta}</p>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        // 投稿一覧表示
+        function renderPosts(filter = '') {
+            const postsList = document.getElementById('postsList');
+            const postCount = document.getElementById('postCount');
+            
+            let filteredPosts = posts;
+            if (filter) {
+                filteredPosts = posts.filter(post => 
+                    post.accountName.toLowerCase().includes(filter.toLowerCase()) ||
+                    post.transcription.toLowerCase().includes(filter.toLowerCase())
+                );
+            }
+
+            postCount.textContent = filteredPosts.length;
+
+            if (filteredPosts.length === 0) {
+                postsList.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📭</div>
+                        <p>${filter ? '検索結果が見つかりませんでした' : 'まだ投稿が保存されていません'}</p>
+                    </div>
+                `;
+                return;
+            }
+
+            postsList.innerHTML = filteredPosts.map(post => `
+                <div class="post-card" onclick="showPostDetail(${post.id})">
+                    <div class="post-header">
+                        <div class="post-account">${post.accountName}</div>
+                        <div class="post-stats">
+                            ${post.followers ? `👥 ${formatNumber(post.followers)}` : ''} 
+                            ${post.likes ? `❤️ ${formatNumber(post.likes)}` : ''}
+                        </div>
+                    </div>
+                    ${post.url ? `<a class="post-url" href="${post.url}" target="_blank" onclick="event.stopPropagation()">${post.url}</a>` : ''}
+                    <div class="post-text">${post.transcription.substring(0, 150)}${post.transcription.length > 150 ? '...' : ''}</div>
+                    <div class="post-analysis-tags">
+                        ${post.analysis.hook ? '<span class="tag">🎣 フック</span>' : ''}
+                        ${post.analysis.empathy ? '<span class="tag">💭 共感</span>' : ''}
+                        ${post.analysis.problem ? '<span class="tag">❓ 問題提起</span>' : ''}
+                        ${post.analysis.solution ? '<span class="tag">💡 解決策</span>' : ''}
+                        ${post.analysis.benefit ? '<span class="tag">⭐ ベネフィット</span>' : ''}
+                        ${post.analysis.cta ? '<span class="tag">📢 CTA</span>' : ''}
+                    </div>
+                    <div class="post-actions" onclick="event.stopPropagation()">
+                        <button class="delete-btn" onclick="deletePost(${post.id})">削除</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // 投稿詳細表示
+        function showPostDetail(id) {
+            const post = posts.find(p => p.id === id);
+            if (!post) return;
+
+            const modal = document.getElementById('modal');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalBody = document.getElementById('modalBody');
+
+            modalTitle.textContent = post.accountName;
+            modalBody.innerHTML = `
+                <div style="margin-bottom: 20px;">
+                    ${post.url ? `<a href="${post.url}" target="_blank" style="color: #4A90E2; text-decoration: none;">📎 投稿を開く →</a><br>` : ''}
+                    <div style="margin-top: 10px; font-size: 13px; color: #888;">
+                        ${post.followers ? `👥 フォロワー: ${formatNumber(post.followers)}` : ''} 
+                        ${post.likes ? `| ❤️ いいね: ${formatNumber(post.likes)}` : ''}
+                    </div>
+                </div>
+
+                <h3 style="margin-bottom: 10px;">📝 文字起こし</h3>
+                <div class="transcription-box">${post.transcription}</div>
+
+                <h3 style="margin-bottom: 15px;">📊 構成分析</h3>
+                <div class="analysis-result">
+                    ${post.analysis.hook ? `
+                        <div class="analysis-section">
+                            <h3>🎣 フック</h3>
+                            <p>${post.analysis.hook}</p>
+                        </div>
+                    ` : ''}
+                    ${post.analysis.empathy ? `
+                        <div class="analysis-section">
+                            <h3>💭 共感ポイント</h3>
+                            <p>${post.analysis.empathy}</p>
+                        </div>
+                    ` : ''}
+                    ${post.analysis.problem ? `
+                        <div class="analysis-section">
+                            <h3>❓ 問題提起</h3>
+                            <p>${post.analysis.problem}</p>
+                        </div>
+                    ` : ''}
+                    ${post.analysis.solution ? `
+                        <div class="analysis-section">
+                            <h3>💡 ノウハウ・解決策</h3>
+                            <p>${post.analysis.solution}</p>
+                        </div>
+                    ` : ''}
+                    ${post.analysis.benefit ? `
+                        <div class="analysis-section">
+                            <h3>⭐ ベネフィット</h3>
+                            <p>${post.analysis.benefit}</p>
+                        </div>
+                    ` : ''}
+                    ${post.analysis.cta ? `
+                        <div class="analysis-section">
+                            <h3>📢 CTA（行動喚起）</h3>
+                            <p>${post.analysis.cta}</p>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+
+            modal.classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('modal').classList.remove('active');
+        }
+
+        // 投稿削除
+        function deletePost(id) {
+            if (!confirm('この投稿を削除してもよろしいですか？')) return;
+            
+            posts = posts.filter(p => p.id !== id);
+            localStorage.setItem('instagramPosts', JSON.stringify(posts));
+            renderPosts();
+        }
+
+        // 検索
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            renderPosts(e.target.value);
+        });
+
+        // 数値フォーマット
+        function formatNumber(num) {
+            if (num >= 10000) {
+                return (num / 10000).toFixed(1) + '万';
+            }
+            return num.toLocaleString();
+        }
+
+        // 初期表示
+        renderPosts();
+    </script>
+</body>
+</html>
