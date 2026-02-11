@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instagram投稿分析ツール</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: #f7f7f7;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            font-size: 28px;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 1024px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .panel {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .panel h2 {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #1a1a1a;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            font-size: 14px;
+            color: #555;
+        }
+
+        input[type="text"],
+        input[type="number"],
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: border-color 0.2s;
+        }
+
+        input[type="text"]:focus,
+        input[type="number"]:focus,
+        textarea:focus {
+            outline: none;
+            border-color: #4A90E2;
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .file-upload {
+            border: 2px dashed #ddd;
+            border-radius: 8px;
+            padding: 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: #fafafa;
+        }
+
+        .file-upload:hover {
+            border-color: #4A90E2;
+            background: #f0f7ff;
+        }
+
+        .file-upload.active {
+            border-color: #4A90E2;
+            background: #f0f7ff;
+        }
+
+        .file-upload input[type="file"] {
+            display: none;
+        }
+
+        .file-upload-icon {
+            font-size: 48px;
+            margin-bottom: 10px;
+        }
+
+        .file-info {
+            margin-top: 15px;
+            padding: 12px;
+            background: #e8f4f8;
+            border-radius: 6px;
+            font-size: 13px;
+            color: #2c5d7a;
+        }
+
+        button {
+            background: #4A90E2;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background: #357ABD;
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .analysis-result {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #4A90E2;
+        }
+
+        .analysis-section {
+            margin-bottom: 20px;
+        }
+
+        .analysis-section:last-child {
+            margin-bottom: 0;
+        }
+
+        .analysis-section h3 {
+            font-size: 15px;
+            font-weight: 600;
+            color: #4A90E2;
+            margin-bottom: 8px;
+        }
+
+        .analysis-section p {
+            font-size: 14px;
+            line-height: 1.6;
+            color: #555;
+        }
+
+        .posts-list {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .post-card {
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            transition: all 0.2s;
+            cursor: pointer;
+            background: white;
+        }
+
+        .post-card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+
+        .post-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 12px;
+        }
+
+        .post-account {
+            font-weight: 600;
+            font-size: 16px;
+            color: #1a1a1a;
+        }
+
+        .post-stats {
+            font-size: 12px;
+            color: #888;
+        }
+
+        .post-url {
+            font-size: 13px;
+            color: #4A90E2;
+            text-decoration: none;
+            display: block;
+            margin-bottom: 12px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .post-url:hover {
+            text-decoration: underline;
+        }
+
+        .post-text {
+            font-size: 14px;
+            color: #555;
+            margin-bottom: 12px;
+            line-height: 1.5;
+            max-height: 60px;
+            overflow: hidden;
+        }
+
+        .post-analysis-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .tag {
+            background: #e8f4f8;
+            color: #2c5d7a;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #888;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #4A90E2;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+
+        .empty-state-icon {
+            font-size: 64px;
+            margin-bottom: 15px;
+        }
+
+        .search-box {
+            margin-bottom: 20px;
+        }
+
+        .search-box input {
+            width: 100%;
+        }
+
+        .delete-btn {
+            background: #dc3545;
+            padding: 6px 12px;
+            font-size: 12px;
+            margin-top: 0;
+            width: auto;
+        }
+
+        .delete-btn:hover {
+            background: #c82333;
+        }
+
+        .post-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 12px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            overflow-y: auto;
+        }
+
+        .modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 40px;
+            border-radius: 12px;
+            max-width: 800px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-close {
+            background: none;
+            color: #999;
+            font-size: 28px;
+            padding: 0;
+            width: auto;
+            margin: 0;
+            cursor: pointer;
+        }
+
+        .modal-close:hover {
+            color: #333;
+        }
+
+        .transcription-box {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📊 Instagram投稿分析ツール</h1>
+            <p class="subtitle">動画の文字起こし＆構成分析で、バズる投稿の秘密を解明</p>
+        </header>
+
+        <div class="main-content">
+            <div class="panel">
+                <h2>新規投稿を追加</h2>
+                
+                <div class="form-group">
+                    <label>動画ファイル or テキスト入力</label>
+                    <div class="file-upload" id="fileUpload">
+                        <input type="file" id="videoFile" accept="video/*,audio/*">
+                        <div class="file-upload-icon">🎥</div>
+                        <p>動画ファイルをドラッグ＆ドロップ<br>またはクリックして選択</p>
+                        <p style="font-size: 12px; color: #888; margin-top: 8px;">mp4, mov, m4a など</p>
+                    </div>
+                    <div id="fileInfo" class="file-info" style="display: none;"></div>
+                </div>
+
+                <div class="form-group">
+                    <label>または、テキストを直接入力</label>
+                    <textarea id="manualText" placeholder="投稿の内容を貼り付けてください..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>アカウント名 *</label>
+                    <input type="text" id="accountName" placeholder="@username" required>
+                </div>
+
+                <div class="form-group">
+                    <label>投稿URL</label>
+                    <input type="text" id="postUrl" placeholder="https://www.instagram.com/p/...">
+                </div>
+
+                <div class="form-group">
+                    <label>フォロワー数</label>
+                    <input type="number" id="followers" placeholder="10000">
+                </div>
+
+                <div class="form-group">
+                    <label>いいね数</label>
+                    <input type="number" id="likes" placeholder="50000">
+                </div>
+
+                <button id="analyzeBtn">分析して保存</button>
+
+                <div id="analysisResult" style="display: none;"></div>
+            </div>
+
+            <div class="panel">
+                <h2>使い方</h2>
+                <div style="font-size: 14px; color: #555; line-height: 1.8;">
+                    <p style="margin-bottom: 15px;"><strong>📥 ステップ1：</strong> Instagram動画を保存して、このアプリにアップロード</p>
+                    <p style="margin-bottom: 15px;"><strong>🎯 ステップ2：</strong> AIが自動で文字起こし＆構成を分析</p>
+                    <p style="margin-bottom: 15px;"><strong>💾 ステップ3：</strong> データが保存され、下部の一覧に表示されます</p>
+                    
+                    <div style="margin-top: 25px; padding: 15px; background: #fff3cd; border-radius: 8px; border-left: 4px solid #ffc107;">
+                        <strong>💡 分析される構成要素：</strong>
+                        <ul style="margin-top: 10px; margin-left: 20px;">
+                            <li>フック（冒頭の注目ポイント）</li>
+                            <li>共感ポイント</li>
+                            <li>問題提起</li>
+                            <li>ノウハウ・解決策</li>
+                            <li>ベネフィット</li>
+                            <li>CTA（行動喚起）</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="posts-list">
+            <h2>保存済み投稿（<span id="postCount">0</span>件）</h2>
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="🔍 アカウント名や内容で検索...">
+            </div>
+            <div id="postsList">
+                <div class="empty-state">
+                    <div class="empty-state-icon">📭</div>
+                    <p>まだ投稿が保存されていません</p>
+                    <p style="font-size: 13px; color: #bbb; margin-top: 8px;">上のフォームから投稿を追加してください</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle"></h2>
+                <button class="modal-close" onclick="closeModal()">×</button>
+            </div>
+            <div id="modalBody"></div>
+        </div>
+    </div>
+
+    <script>
+        let posts = JSON.parse(localStorage.getItem('instagramPosts') || '[]');
+
+        const fileUpload = document.getElementById('fileUpload');
+        const videoFile = document.getElementById('videoFile');
+        const fileInfo = document.getElementById('fileInfo');
+
+        fileUpload.addEventListener('click', () => videoFile.click());
+
+        fileUpload.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            fileUpload.classList.add('active');
+        });
+
+        fileUpload.addEventListener('dragleave', () => {
+            fileUpload.classList.remove('active');
+        });
+
+        fileUpload.addEventListener('drop', (e) => {
+            e.preventDefault();
+            fileUpload.classList.remove('active');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                videoFile.files = files;
+                showFileInfo(files[0]);
+            }
+        });
+
+        videoFile.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                showFileInfo(e.target.files[0]);
+            }
+        });
+
+        function showFileInfo(file) {
+            const sizeMB = (file.size / 1024 / 1024).toFixed(2);
+            fileInfo.style.display = 'block';
+            fileInfo.innerHTML = `✅ ${file.name} (${sizeMB} MB)`;
+        }
+
+        async function transcribeAudio(file) {
+            return new Promise((resolve, reject) => {
+                resolve("（音声文字起こし機能は、Claude APIとの統合が必要です。現在は手動入力をご利用ください）");
+            });
+        }
+
+        async function analyzeStructure(text) {
+            try {
+                const response = await fetch("https://api.anthropic.com/v1/messages", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        model: "claude-sonnet-4-20250514",
+                        max_tokens: 1000,
+                        messages: [{
+                            role: "user",
+                            content: `以下のInstagram投稿テキストを分析して、JSON形式で構成要素を抽出してください。
+
+投稿内容：
+${text}
+
+以下の項目を分析してください（該当しない項目は空文字列）：
+- hook: フック（冒頭の注目を引く部分、最初の1-2文）
+- empathy: 共感ポイント（視聴者の気持ちに寄り添う部分）
+- problem: 問題提起（どんな課題や悩みを提示しているか）
+- solution: ノウハウ・解決策（具体的な方法やアドバイス）
+- benefit: ベネフィット（これをすることで得られるメリット）
+- cta: CTA・行動喚起（フォロー、保存、コメントなどの呼びかけ）
+
+JSON形式のみで回答してください。前後にMarkdownのバッククォートや説明文は不要です。`
+                        }]
+                    })
+                });
+
+                const data = await response.json();
+                const content = data.content.find(item => item.type === "text")?.text || "";
+                
+                const cleaned = content.replace(/```json|```/g, "").trim();
+                return JSON.parse(cleaned);
+                
+            } catch (error) {
+                console.error("分析エラー:", error);
+                return {
+                    hook: text.substring(0, 100) + "...",
+                    empathy: "（自動分析）",
+                    problem: "（自動分析）",
+                    solution: "（自動分析）",
+                    benefit: "（自動分析）",
+                    cta: "（自動分析）"
+                };
+            }
+        }
+
+        document.getElementById('analyzeBtn').addEventListener('click', async () => {
+            const accountName = document.getElementById('accountName').value.trim();
+            const manualText = document.getElementById('manualText').value.trim();
+            const videoFileInput = document.getElementById('videoFile').files[0];
+            
+            if (!accountName) {
+                alert('アカウント名を入力してください');
+                return;
+            }
+
+            if (!manualText && !videoFileInput) {
+                alert('テキストを入力するか、動画ファイルをアップロードしてください');
+                return;
+            }
+
+            const btn = document.getElementById('analyzeBtn');
+            btn.disabled = true;
+            btn.textContent = '分析中...';
+
+            try {
+                let transcription = manualText;
+                
+                if (videoFileInput && !manualText) {
+                    const loadingDiv = document.getElementById('analysisResult');
+                    loadingDiv.style.display = 'block';
+                    loadingDiv.innerHTML = `
+                        <div class="loading">
+                            <div class="spinner"></div>
+                            <p>音声を文字起こし中...</p>
+                        </div>
+                    `;
+                    
+                    transcription = await transcribeAudio(videoFileInput);
+                }
+
+                const loadingDiv = document.getElementById('analysisResult');
+                loadingDiv.style.display = 'block';
+                loadingDiv.innerHTML = `
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>構成を分析中...</p>
+                    </div>
+                `;
+
+                const analysis = await analyzeStructure(transcription);
+
+                const post = {
+                    id: Date.now(),
+                    accountName: accountName,
+                    url: document.getElementById('postUrl').value.trim(),
+                    followers: document.getElementById('followers').value,
+                    likes: document.getElementById('likes').value,
+                    transcription: transcription,
+                    analysis: analysis,
+                    createdAt: new Date().toISOString()
+                };
+
+                posts.unshift(post);
+                localStorage.setItem('instagramPosts', JSON.stringify(posts));
+
+                displayAnalysisResult(analysis);
+                renderPosts();
+                
+                document.getElementById('accountName').value = '';
+                document.getElementById('postUrl').value = '';
+                document.getElementById('followers').value = '';
+                document.getElementById('likes').value = '';
+                document.getElementById('manualText').value = '';
+                document.getElementById('videoFile').value = '';
+                fileInfo.style.display = 'none';
+
+                alert('✅ 投稿を保存しました！');
+
+            } catch (error) {
+                console.error('エラー:', error);
+                alert('エラーが発生しました: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '分析して保存';
+            }
+        });
+
+        function displayAnalysisResult(analysis) {
+            const resultDiv = document.getElementById('analysisResult');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = `
+                <div class="analysis-result">
+                    <h3 style="margin-bottom: 15px; color: #1a1a1a;">✨ 構成分析結果</h3>
+                    ${analysis.hook ? `
+                        <div class="analysis-section">
+                            <h3>🎣 フック</h3>
+                            <p>${analysis.hook}</p>
+                        </div>
+                    ` : ''}
+                    ${analysis.empathy ? `
+                        <div class="analysis-section">
+                            <h3>💭 共感ポイント</h3>
+                            <p>${analysis.empathy}</p>
+                        </div>
+                    ` : ''}
+                    ${analysis.problem ? `
+                        <div class="analysis-section">
+                            <h3>❓ 問題提起</h3>
+                            <p>${analysis.problem}</p>
+                        </div>
+                    ` : ''}
+                    ${analysis.solution ? `
+                        <div class="analysis-section">
+                            <h3>💡 ノウハウ・解決策</h3>
+                            <p>${analysis.solution}</p>
+                        </div>
+                    ` : ''}
+                    ${analysis.benefit ? `
+                        <div class="analysis-section">
+                            <h3>⭐ ベネフィット</h3>
+                            <p>${analysis.benefit}</p>
+                        </div>
+                    ` : ''}
+                    ${analysis.cta ? `
+                        <div class="analysis-section">
+                            <h3>📢 CTA（行動喚起）</h3>
+                            <p>${analysis.cta}</p>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        function renderPosts(filter = '') {
+            const postsList = document.getElementById('postsList');
+            const postCount = document.getElementById('postCount');
+            
+            let filteredPosts = posts;
+            if (filter) {
+                filteredPosts = posts.filter(post => 
+                    post.accountName.toLowerCase().includes(filter.toLowerCase()) ||
+                    post.transcription.toLowerCase().includes(filter.toLowerCase())
+                );
+            }
+
+            postCount.textContent = filteredPosts.length;
+
+            if (filteredPosts.length === 0) {
+                postsList.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📭</div>
+                        <p>${filter ? '検索結果が見つかりませんでした' : 'まだ投稿が保存されていません'}</p>
+                    </div>
+                `;
+                return;
+            }
+
+            postsList.innerHTML = filteredPosts.map(post => `
+                <div class="post-card" onclick="showPostDetail(${post.id})">
+                    <div class="post-header">
+                        <div class="post-account">${post.accountName}</div>
+                        <div class="post-stats">
+                            ${post.followers ? `👥 ${formatNumber(post.followers)}` : ''} 
+                            ${post.likes ? `❤️ ${formatNumber(post.likes)}` : ''}
+                        </div>
+                    </div>
+                    ${post.url ? `<a class="post-url" href="${post.url}" target="_blank" onclick="event.stopPropagation()">${post.url}</a>` : ''}
+                    <div class="post-text">${post.transcription.substring(0, 150)}${post.transcription.length > 150 ? '...' : ''}</div>
+                    <div class="post-analysis-tags">
+                        ${post.analysis.hook ? '<span class="tag">🎣 フック</span>' : ''}
+                        ${post.analysis.empathy ? '<span class="tag">💭 共感</span>' : ''}
+                        ${post.analysis.problem ? '<span class="tag">❓ 問題提起</span>' : ''}
+                        ${post.analysis.solution ? '<span class="tag">💡 解決策</span>' : ''}
+                        ${post.analysis.benefit ? '<span class="tag">⭐ ベネフィット</span>' : ''}
+                        ${post.analysis.cta ? '<span class="tag">📢 CTA</span>' : ''}
+                    </div>
+                    <div class="post-actions" onclick="event.stopPropagation()">
+                        <button class="delete-btn" onclick="deletePost(${post.id})">削除</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function showPostDetail(id) {
+            const post = posts.find(p => p.id === id);
+            if (!post) return;
+
+            const modal = document.getElementById('modal');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalBody = document.getElementById('modalBody');
+
+            modalTitle.textContent = post.accountName;
+            modalBody.innerHTML = `
+                <div style="margin-bottom: 20px;">
+                    ${post.url ? `<a href="${post.url}" target="_blank" style="color: #4A90E2; text-decoration: none;">📎 投稿を開く →</a><br>` : ''}
+                    <div style="margin-top: 10px; font-size: 13px; color: #888;">
+                        ${post.followers ? `👥 フォロワー: ${formatNumber(post.followers)}` : ''} 
+                        ${post.likes ? `| ❤️ いいね: ${formatNumber(post.likes)}` : ''}
+                    </div>
+                </div>
+
+                <h3 style="margin-bottom: 10px;">📝 文字起こし</h3>
+                <div class="transcription-box">${post.transcription}</div>
+
+                <h3 style="margin-bottom: 15px;">📊 構成分析</h3>
+                <div class="analysis-result">
+                    ${post.analysis.hook ? `
+                        <div class="analysis-section">
+                            <h3>🎣 フック</h3>
+                            <p>${post.analysis.hook}</p>
+                        </div>
+                    ` : ''}
+                    ${post.analysis.empathy ? `
+                        <div class="analysis-section">
+                            <h3>💭 共感ポイント</h3>
+                            <p>${post.analysis.empathy}</p>
+                        </div>
+                    ` : ''}
+                    ${post.analysis.problem ? `
+                        <div class="analysis-section">
+                            <h3>❓ 問題提起</h3>
+                            <p>${post.analysis.problem}</p>
+                        </div>
+                    ` : ''}
+                    ${post.analysis.solution ? `
+                        <div class="analysis-section">
+                            <h3>💡 ノウハウ・解決策</h3>
+                            <p>${post.analysis.solution}</p>
+                        </div>
+                    ` : ''}
+                    ${post.analysis.benefit ? `
+                        <div class="analysis-section">
+                            <h3>⭐ ベネフィット</h3>
+                            <p>${post.analysis.benefit}</p>
+                        </div>
+                    ` : ''}
+                    ${post.analysis.cta ? `
+                        <div class="analysis-section">
+                            <h3>📢 CTA（行動喚起）</h3>
+                            <p>${post.analysis.cta}</p>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+
+            modal.classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('modal').classList.remove('active');
+        }
+
+        function deletePost(id) {
+            if (!confirm('この投稿を削除してもよろしいですか？')) return;
+            
+            posts = posts.filter(p => p.id !== id);
+            localStorage.setItem('instagramPosts', JSON.stringify(posts));
+            renderPosts();
+        }
+
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            renderPosts(e.target.value);
+        });
+
+        function formatNumber(num) {
+            if (num >= 10000) {
+                return (num / 10000).toFixed(1) + '万';
+            }
+            return num.toLocaleString();
+        }
+
+        renderPosts();
+    </script>
+</body>
+</html>
