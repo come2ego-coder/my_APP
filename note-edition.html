@@ -156,41 +156,6 @@
 
   .overview-text { font-size: 1.02em; color: var(--text); }
 
-  .locked-list { list-style: none; margin-top: 10px; }
-  .locked-item {
-    background: var(--locked-bg);
-    border-radius: 12px;
-    padding: 16px;
-    margin-bottom: 12px;
-    position: relative;
-    cursor: pointer;
-    transition: transform .15s ease, background .15s ease;
-  }
-  .locked-item:active {
-    transform: scale(0.98);
-    background: #ece5d8;
-  }
-  .locked-item .locked-title {
-    font-weight: bold;
-    margin-bottom: 6px;
-    color: var(--text);
-  }
-  .locked-item .locked-teaser {
-    filter: blur(4px);
-    user-select: none;
-    color: var(--muted);
-    font-size: 0.95em;
-  }
-  .locked-item .unlock-hint {
-    margin-top: 8px;
-    font-size: 0.9em;
-    font-weight: bold;
-    color: var(--accent-dark);
-  }
-
-  .cta-box { text-align: center; margin-top: 18px; }
-  .cta-note { font-size: 0.85em; color: var(--muted); margin-top: 10px; }
-
   .share-box { text-align: center; }
   .share-preview {
     background: var(--locked-bg);
@@ -294,36 +259,6 @@
       <p class="overview-text" id="starOverview"></p>
     </div>
 
-    <div class="card">
-      <h2 class="section-title">🔍 もっと詳しく知りたい方へ</h2>
-      <ul class="locked-list">
-        <li class="locked-item" onclick="goToNote()" role="button" tabindex="0">
-          <div class="locked-title">✅ 成功戦略</div>
-          <div class="locked-teaser">あなたの星に合った、具体的な仕事の進め方や戦い方があります。</div>
-          <div class="unlock-hint">続きはnoteで読む▶</div>
-        </li>
-        <li class="locked-item" onclick="goToNote()" role="button" tabindex="0">
-          <div class="locked-title">⚠️ 避けるべき失敗パターン</div>
-          <div class="locked-teaser">このタイプの人がついやってしまいがちな注意点があります。</div>
-          <div class="unlock-hint">続きはnoteで読む▶</div>
-        </li>
-        <li class="locked-item" onclick="goToNote()" role="button" tabindex="0">
-          <div class="locked-title">💰 年収アップの秘訣</div>
-          <div class="locked-teaser">収入を伸ばすために意識したい、あなたのタイプ独自の考え方。</div>
-          <div class="unlock-hint">続きはnoteで読む▶</div>
-        </li>
-        <li class="locked-item" onclick="goToNote()" role="button" tabindex="0">
-          <div class="locked-title">🤝 相性の良いパートナー</div>
-          <div class="locked-teaser">あなたと組むと力を発揮しやすい、相性の良いタイプがあります。</div>
-          <div class="unlock-hint">続きはnoteで読む▶</div>
-        </li>
-      </ul>
-      <div class="cta-box">
-        <button class="btn btn-accent" onclick="goToNote()">詳しい解説を見る<br>（note有料記事へ）</button>
-        <p class="cta-note">※ noteの有料記事に移動します</p>
-      </div>
-    </div>
-
     <div class="card share-box">
       <h2 class="section-title">📱 友達にもシェアしよう</h2>
       <button class="btn btn-outline" onclick="shareResult()">診断結果をInstagramストーリーズでシェアする</button>
@@ -345,10 +280,6 @@
 <div class="toast" id="toast"></div>
 
 <script>
-  // ▼▼▼ noteの有料記事URL（後で差し替えてください） ▼▼▼
-  const NOTE_URL = "https://note.com/preview/n72a558c9d2bc?prev_access_key=3012ce8c76a9024e0e4223ad1320c858";
-  // ▲▲▲ ここまで ▲▲▲
-
   const TENKAN = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸'];
   const CHISHI = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
   const MONTH_BRANCHES = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 0, 1];
@@ -550,14 +481,6 @@
     document.getElementById('inputCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
-  function goToNote() {
-    if (!NOTE_URL || NOTE_URL === 'ここにURLを入れる') {
-      showToast('note記事のURLが未設定です（NOTE_URLを設定してください）');
-      return;
-    }
-    window.open(NOTE_URL, '_blank');
-  }
-
   function showToast(message) {
     const toast = document.getElementById('toast');
     toast.textContent = message;
@@ -600,15 +523,6 @@
     }
     document.body.removeChild(textarea);
   }
-
-  document.querySelectorAll('.locked-item').forEach(function (item) {
-    item.addEventListener('keydown', function (e) {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        goToNote();
-      }
-    });
-  });
 
   window.onload = populateSelects;
 </script>
