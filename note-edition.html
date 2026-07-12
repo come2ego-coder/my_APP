@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<title>ビジネス主星診断 | あなたの仕事の才能タイプは？</title>
+<style>
+  :root {
+    --bg: #faf6ef;
+    --card: #ffffff;
+    --border: #e7ded0;
+    --text: #3a3a3a;
+    --muted: #8a8378;
+    --primary: #6b9080;
+    --primary-dark: #4f6f5e;
+    --accent: #d98a4f;
+    --accent-dark: #b96f38;
+    --locked-bg: #f2ede4;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    font-family: 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', 'Meiryo', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+    font-size: 17px;
+    padding: 16px;
+  }
+  .wrap { max-width: 560px; margin: 0 auto; }
+
+  header.page-header { text-align: center; margin: 10px 0 24px; }
+  header.page-header h1 {
+    font-size: 1.5em;
+    color: var(--primary-dark);
+    margin-bottom: 8px;
+  }
+  header.page-header p {
+    color: var(--muted);
+    font-size: 0.95em;
+  }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 24px 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+  }
+
+  .form-row { margin-bottom: 18px; }
+  .form-row label {
+    display: block;
+    font-weight: bold;
+    margin-bottom: 8px;
+    font-size: 1em;
+    color: var(--text);
+  }
+  .date-selects {
+    display: flex;
+    gap: 8px;
+  }
+  select {
+    flex: 1;
+    padding: 14px 8px;
+    font-size: 1.05em;
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    background: #fff;
+    color: var(--text);
+    min-height: 52px;
+  }
+  select:focus { outline: none; border-color: var(--primary); }
+
+  .btn {
+    display: block;
+    width: 100%;
+    padding: 16px;
+    font-size: 1.1em;
+    font-weight: bold;
+    border: none;
+    border-radius: 14px;
+    cursor: pointer;
+    min-height: 56px;
+    transition: transform .15s ease, opacity .15s ease;
+  }
+  .btn:active { transform: scale(0.98); }
+  .btn-primary { background: var(--primary); color: #fff; }
+  .btn-primary:hover { background: var(--primary-dark); }
+  .btn-accent { background: var(--accent); color: #fff; }
+  .btn-accent:hover { background: var(--accent-dark); }
+  .btn-outline {
+    background: #fff;
+    color: var(--primary-dark);
+    border: 2px solid var(--primary);
+  }
+
+  #resultSection { display: none; }
+  #resultSection.show { display: block; animation: fadeIn .5s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+  h2.section-title {
+    font-size: 1.1em;
+    color: var(--primary-dark);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  table.meishiki {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 6px;
+  }
+  table.meishiki th, table.meishiki td {
+    border: 1px solid var(--border);
+    text-align: center;
+    padding: 12px 6px;
+  }
+  table.meishiki th {
+    background: var(--primary);
+    color: #fff;
+    font-size: 0.9em;
+    font-weight: normal;
+  }
+  table.meishiki th small { display: block; font-size: 0.85em; opacity: 0.9; }
+  table.meishiki td { font-size: 1.15em; font-weight: bold; }
+  table.meishiki td.center-col { background: #fff6ec; border: 2px solid var(--accent); color: var(--accent-dark); }
+  .meishiki-note { font-size: 0.85em; color: var(--muted); text-align: center; margin-top: 8px; }
+
+  .star-highlight {
+    text-align: center;
+    padding: 8px 0 4px;
+  }
+  .star-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 16px;
+    border-radius: 999px;
+    background: var(--locked-bg);
+    margin-bottom: 12px;
+  }
+  .star-dot { width: 14px; height: 14px; border-radius: 50%; display: inline-block; }
+  .star-name {
+    font-size: 1.6em;
+    font-weight: 900;
+    color: var(--primary-dark);
+    margin-bottom: 10px;
+  }
+  .star-oneliner {
+    font-size: 1.05em;
+    color: var(--text);
+  }
+
+  .overview-text { font-size: 1.02em; color: var(--text); }
+
+  .locked-list { list-style: none; margin-top: 10px; }
+  .locked-item {
+    background: var(--locked-bg);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 12px;
+    position: relative;
+  }
+  .locked-item .locked-title {
+    font-weight: bold;
+    margin-bottom: 6px;
+    color: var(--text);
+  }
+  .locked-item .locked-teaser {
+    filter: blur(4px);
+    user-select: none;
+    color: var(--muted);
+    font-size: 0.95em;
+  }
+  .locked-item .unlock-hint {
+    margin-top: 8px;
+    font-size: 0.9em;
+    font-weight: bold;
+    color: var(--accent-dark);
+  }
+
+  .cta-box { text-align: center; margin-top: 18px; }
+  .cta-note { font-size: 0.85em; color: var(--muted); margin-top: 10px; }
+
+  .share-box { text-align: center; }
+  .share-preview {
+    background: var(--locked-bg);
+    border-radius: 10px;
+    padding: 14px;
+    margin-top: 14px;
+    font-size: 0.95em;
+    color: var(--text);
+    text-align: left;
+    white-space: pre-wrap;
+  }
+  .toast {
+    position: fixed;
+    left: 50%;
+    bottom: 24px;
+    transform: translateX(-50%);
+    background: var(--primary-dark);
+    color: #fff;
+    padding: 12px 20px;
+    border-radius: 10px;
+    font-size: 0.95em;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .3s ease;
+    max-width: 90%;
+    text-align: center;
+    z-index: 999;
+  }
+  .toast.show { opacity: 1; }
+
+  .restart-row { text-align: center; margin-top: 8px; }
+
+  .disclaimer {
+    font-size: 0.8em;
+    color: var(--muted);
+    text-align: center;
+    margin-top: 24px;
+    padding: 16px;
+  }
+
+  @media (max-width: 380px) {
+    body { font-size: 16px; }
+    .star-name { font-size: 1.4em; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="page-header">
+    <h1>🗓️ ビジネス主星診断</h1>
+    <p>生年月日から、あなたの「仕事の才能タイプ」を診断します</p>
+  </header>
+
+  <div class="card" id="inputCard">
+    <div class="form-row">
+      <label>生年月日を選んでください</label>
+      <div class="date-selects">
+        <select id="selYear" aria-label="年"></select>
+        <select id="selMonth" aria-label="月"></select>
+        <select id="selDay" aria-label="日"></select>
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="runDiagnosis()">診断する</button>
+  </div>
+
+  <div id="resultSection">
+
+    <div class="card">
+      <h2 class="section-title">📋 あなたの命式表（簡易版）</h2>
+      <table class="meishiki">
+        <thead>
+          <tr>
+            <th>年柱<br><small>社会運</small></th>
+            <th>月柱<br><small>仕事運</small></th>
+            <th>日柱<br><small>本質</small></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td id="cellNen"></td>
+            <td class="center-col" id="cellGekkan"></td>
+            <td id="cellNicchi"></td>
+          </tr>
+        </tbody>
+      </table>
+      <p class="meishiki-note">★ 仕事運を示す「月柱」があなたの中心星のもとになります</p>
+    </div>
+
+    <div class="card star-highlight">
+      <div class="star-badge">
+        <span class="star-dot" id="starDot"></span>
+        <span id="starColorName"></span>
+      </div>
+      <div class="star-name" id="starName"></div>
+      <div class="star-oneliner" id="starOneliner"></div>
+    </div>
+
+    <div class="card">
+      <h2 class="section-title">🎯 ビジネスタイプの概要</h2>
+      <p class="overview-text" id="starOverview"></p>
+    </div>
+
+    <div class="card">
+      <h2 class="section-title">🔍 もっと詳しく知りたい方へ</h2>
+      <ul class="locked-list">
+        <li class="locked-item">
+          <div class="locked-title">✅ 成功戦略</div>
+          <div class="locked-teaser">あなたの星に合った、具体的な仕事の進め方や戦い方があります。</div>
+          <div class="unlock-hint">詳しくはこちら▶</div>
+        </li>
+        <li class="locked-item">
+          <div class="locked-title">⚠️ 避けるべき失敗パターン</div>
+          <div class="locked-teaser">このタイプの人がついやってしまいがちな注意点があります。</div>
+          <div class="unlock-hint">詳しくはこちら▶</div>
+        </li>
+        <li class="locked-item">
+          <div class="locked-title">💰 年収アップの秘訣</div>
+          <div class="locked-teaser">収入を伸ばすために意識したい、あなたのタイプ独自の考え方。</div>
+          <div class="unlock-hint">詳しくはこちら▶</div>
+        </li>
+        <li class="locked-item">
+          <div class="locked-title">🤝 相性の良いパートナー</div>
+          <div class="locked-teaser">あなたと組むと力を発揮しやすい、相性の良いタイプがあります。</div>
+          <div class="unlock-hint">詳しくはこちら▶</div>
+        </li>
+      </ul>
+      <div class="cta-box">
+        <button class="btn btn-accent" onclick="goToNote()">詳しい解説を見る<br>（note有料記事へ）</button>
+        <p class="cta-note">※ noteの有料記事に移動します</p>
+      </div>
+    </div>
+
+    <div class="card share-box">
+      <h2 class="section-title">📱 友達にもシェアしよう</h2>
+      <button class="btn btn-outline" onclick="shareResult()">診断結果をInstagramストーリーズでシェアする</button>
+      <div class="share-preview" id="sharePreview"></div>
+    </div>
+
+    <div class="restart-row">
+      <button class="btn btn-outline" onclick="resetDiagnosis()">もう一度診断する</button>
+    </div>
+
+    <p class="disclaimer">
+      ※本ツールは生年月日をもとにした簡易的な統計診断であり、正式な四柱推命の暦計算とは異なります。<br>
+      結果は参考情報としてお楽しみください。
+    </p>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // ▼▼▼ noteの有料記事URL（後で差し替えてください） ▼▼▼
+  const NOTE_URL = "https://note.com/preview/n72a558c9d2bc?prev_access_key=3012ce8c76a9024e0e4223ad1320c858";
+  // ▲▲▲ ここまで ▲▲▲
+
+  const TENKAN = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸'];
+  const CHISHI = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
+  const MONTH_BRANCHES = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 0, 1];
+
+  const STAR_MAP = {
+    '甲': { '甲':'貫索', '乙':'石門', '丙':'鳳閣', '丁':'調舒', '戊':'禄存', '己':'司禄', '庚':'車騎', '辛':'牽牛', '壬':'龍高', '癸':'玉堂' },
+    '乙': { '乙':'貫索', '甲':'石門', '丁':'鳳閣', '丙':'調舒', '己':'禄存', '戊':'司禄', '辛':'車騎', '庚':'牽牛', '癸':'龍高', '壬':'玉堂' },
+    '丙': { '丙':'貫索', '丁':'石門', '戊':'鳳閣', '己':'調舒', '庚':'禄存', '辛':'司禄', '壬':'車騎', '癸':'牽牛', '甲':'龍高', '乙':'玉堂' },
+    '丁': { '丁':'貫索', '丙':'石門', '己':'鳳閣', '戊':'調舒', '辛':'禄存', '庚':'司禄', '癸':'車騎', '壬':'牽牛', '乙':'龍高', '甲':'玉堂' },
+    '戊': { '戊':'貫索', '己':'石門', '庚':'鳳閣', '辛':'調舒', '壬':'禄存', '癸':'司禄', '甲':'車騎', '乙':'牽牛', '丙':'龍高', '丁':'玉堂' },
+    '己': { '己':'貫索', '戊':'石門', '辛':'鳳閣', '庚':'調舒', '癸':'禄存', '壬':'司禄', '乙':'車騎', '甲':'牽牛', '丁':'龍高', '丙':'玉堂' },
+    '庚': { '庚':'貫索', '辛':'石門', '壬':'鳳閣', '癸':'調舒', '甲':'禄存', '乙':'司禄', '丙':'車騎', '丁':'牽牛', '戊':'龍高', '己':'玉堂' },
+    '辛': { '辛':'貫索', '庚':'石門', '癸':'鳳閣', '壬':'調舒', '乙':'禄存', '甲':'司禄', '丁':'車騎', '丙':'牽牛', '己':'龍高', '戊':'玉堂' },
+    '壬': { '壬':'貫索', '癸':'石門', '甲':'鳳閣', '乙':'調舒', '丙':'禄存', '丁':'司禄', '戊':'車騎', '己':'牽牛', '庚':'龍高', '辛':'玉堂' },
+    '癸': { '癸':'貫索', '壬':'石門', '乙':'鳳閣', '甲':'調舒', '丁':'禄存', '丙':'司禄', '己':'車騎', '戊':'牽牛', '辛':'龍高', '庚':'玉堂' }
+  };
+
+  // 10タイプの説明データ（診断結果画面の「概要」用。詳しい戦略等はnote記事側で扱う）
+  const STAR_DATA = {
+    '貫索': {
+      label: '貫索星（独立型）',
+      oneLiner: '自分の軸を大切にし、周囲に流されず生きる独立独歩の人。',
+      overview: '会社員よりも、自分の裁量で動ける環境で本来の力を発揮するタイプです。専門性を深めるほど信頼が集まり、人に振り回されない生き方が向いています。',
+      color: '#228b22', colorName: '緑'
+    },
+    '石門': {
+      label: '石門星（組織型）',
+      oneLiner: '人とのつながりを大切にし、チームの中で力を発揮する人。',
+      overview: '一人で完結するより、仲間と協力しながら物事を進める方が得意です。人脈の広さや調整力が、あなたの一番の強みになります。',
+      color: '#d99a2b', colorName: 'オレンジ'
+    },
+    '鳳閣': {
+      label: '鳳閣星（表現型）',
+      oneLiner: '明るく自然体で、人を楽しませる才能を持つ人。',
+      overview: '自分らしさを表現したり、情報を発信することで輝くタイプです。堅苦しさより楽しさを大切にすると、自然と人が集まってきます。',
+      color: '#d1553f', colorName: '赤'
+    },
+    '調舒': {
+      label: '調舒星（創造型）',
+      oneLiner: '独自の感性を持ち、こだわりの世界観を大切にする人。',
+      overview: '多くの人に合わせるより、自分にしか作れないものを追求する方が力を発揮します。感性を活かした表現が、あなたらしさそのものです。',
+      color: '#8266b3', colorName: '紫'
+    },
+    '禄存': {
+      label: '禄存星（投資型）',
+      oneLiner: '人やお金を動かす力があり、スケールの大きな発想をする人。',
+      overview: '小さくまとめるより、大きく展開する方が向いているタイプです。人を巻き込みながら物事を大きくしていく発想力があります。',
+      color: '#c9a227', colorName: '金'
+    },
+    '司禄': {
+      label: '司禄星（蓄積型）',
+      oneLiner: 'コツコツと積み上げ、着実に安定を築いていく人。',
+      overview: '一気に結果を求めるより、時間をかけて信頼と資産を積み上げるのが得意です。長く続けることで、ゆるぎない安定を手にします。',
+      color: '#8b5e34', colorName: '茶'
+    },
+    '車騎': {
+      label: '車騎星（行動型）',
+      oneLiner: '考えるより先に動き、現場で結果を出す行動派の人。',
+      overview: 'じっくり考えるよりも、まず動いてみることで道が開けるタイプです。フットワークの軽さとスピード感があなたの武器です。',
+      color: '#c15a2e', colorName: 'オレンジレッド'
+    },
+    '牽牛': {
+      label: '牽牛星（権威型）',
+      oneLiner: '誠実さと責任感を大切にし、信頼を積み重ねる人。',
+      overview: '肩書きや実績を大切にしながら、コツコツと社会的な信用を築いていくタイプです。真面目に積み重ねた努力が、やがて大きな評価につながります。',
+      color: '#9a9a9a', colorName: '銀'
+    },
+    '龍高': {
+      label: '龍高星（革新型）',
+      oneLiner: '常に新しいことに挑戦し、変化を楽しむ人。',
+      overview: '同じことの繰り返しより、新しい知識や環境に触れることで力を発揮するタイプです。変化を恐れない好奇心が、あなたを成長させます。',
+      color: '#2f8fc0', colorName: '青'
+    },
+    '玉堂': {
+      label: '玉堂星（教育型）',
+      oneLiner: '深い知識と思いやりを持ち、人に伝えることが得意な人。',
+      overview: '学んだことを整理し、わかりやすく人に伝えることで力を発揮するタイプです。教えたり導いたりすることに、自然な喜びを感じます。',
+      color: '#4169e1', colorName: 'ロイヤルブルー'
+    }
+  };
+
+  function getKanshi(index) {
+    return { kan: TENKAN[index % 10], shi: CHISHI[index % 12] };
+  }
+
+  function getNenchu(year) {
+    const base = 1984;
+    const index = (year - base + 60000) % 60;
+    return getKanshi(index);
+  }
+
+  function getGekkan(year, month) {
+    const nenKan = getNenchu(year).kan;
+    const nenKanIndex = TENKAN.indexOf(nenKan);
+    const monthBranch = MONTH_BRANCHES[month - 1];
+    let monthKanIndex;
+    if (nenKanIndex === 0 || nenKanIndex === 5) monthKanIndex = (monthBranch * 2 + 2) % 10;
+    else if (nenKanIndex === 1 || nenKanIndex === 6) monthKanIndex = (monthBranch * 2 + 4) % 10;
+    else if (nenKanIndex === 2 || nenKanIndex === 7) monthKanIndex = (monthBranch * 2 + 6) % 10;
+    else if (nenKanIndex === 3 || nenKanIndex === 8) monthKanIndex = (monthBranch * 2 + 8) % 10;
+    else monthKanIndex = (monthBranch * 2) % 10;
+    return { kan: TENKAN[monthKanIndex], shi: CHISHI[monthBranch] };
+  }
+
+  function getNicchi(year, month, day) {
+    const baseDate = new Date(2000, 0, 1);
+    const targetDate = new Date(year, month - 1, day);
+    const diffDays = Math.floor((targetDate - baseDate) / (1000 * 60 * 60 * 24));
+    const index = (52 + diffDays + 60000) % 60;
+    return getKanshi(index);
+  }
+
+  function daysInMonth(year, month) {
+    return new Date(year, month, 0).getDate();
+  }
+
+  function populateSelects() {
+    const selYear = document.getElementById('selYear');
+    const selMonth = document.getElementById('selMonth');
+    const selDay = document.getElementById('selDay');
+    const currentYear = new Date().getFullYear();
+
+    for (let y = currentYear; y >= currentYear - 100; y--) {
+      const opt = document.createElement('option');
+      opt.value = y;
+      opt.textContent = y + '年';
+      selYear.appendChild(opt);
+    }
+    for (let m = 1; m <= 12; m++) {
+      const opt = document.createElement('option');
+      opt.value = m;
+      opt.textContent = m + '月';
+      selMonth.appendChild(opt);
+    }
+
+    function refreshDays() {
+      const y = parseInt(selYear.value, 10);
+      const m = parseInt(selMonth.value, 10);
+      const prevDay = selDay.value;
+      const maxDay = daysInMonth(y, m);
+      selDay.innerHTML = '';
+      for (let d = 1; d <= maxDay; d++) {
+        const opt = document.createElement('option');
+        opt.value = d;
+        opt.textContent = d + '日';
+        selDay.appendChild(opt);
+      }
+      if (prevDay && parseInt(prevDay, 10) <= maxDay) {
+        selDay.value = prevDay;
+      }
+    }
+
+    selYear.addEventListener('change', refreshDays);
+    selMonth.addEventListener('change', refreshDays);
+
+    // デフォルト値（30年前の今日あたり）
+    const defaultYear = currentYear - 30;
+    selYear.value = defaultYear;
+    selMonth.value = new Date().getMonth() + 1;
+    refreshDays();
+    selDay.value = new Date().getDate();
+  }
+
+  let currentStarLabel = '';
+
+  function runDiagnosis() {
+    const year = parseInt(document.getElementById('selYear').value, 10);
+    const month = parseInt(document.getElementById('selMonth').value, 10);
+    const day = parseInt(document.getElementById('selDay').value, 10);
+
+    const nenchu = getNenchu(year);
+    const gekkan = getGekkan(year, month);
+    const nicchi = getNicchi(year, month, day);
+
+    const starGekkan = STAR_MAP[nicchi.kan][gekkan.kan];
+    const data = STAR_DATA[starGekkan];
+
+    document.getElementById('cellNen').textContent = nenchu.kan + nenchu.shi;
+    document.getElementById('cellGekkan').textContent = gekkan.kan + gekkan.shi;
+    document.getElementById('cellNicchi').textContent = nicchi.kan + nicchi.shi;
+
+    document.getElementById('starDot').style.backgroundColor = data.color;
+    document.getElementById('starColorName').textContent = 'ラッキーカラー：' + data.colorName;
+    document.getElementById('starName').textContent = data.label;
+    document.getElementById('starOneliner').textContent = data.oneLiner;
+    document.getElementById('starOverview').textContent = data.overview;
+
+    currentStarLabel = data.label;
+    const shareText = `私は【${data.label}】でした！あなたは？\n→ ${location.href.split('?')[0].split('#')[0]}`;
+    document.getElementById('sharePreview').textContent = shareText;
+
+    const resultSection = document.getElementById('resultSection');
+    resultSection.classList.add('show');
+    resultSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function resetDiagnosis() {
+    document.getElementById('resultSection').classList.remove('show');
+    document.getElementById('inputCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function goToNote() {
+    if (!NOTE_URL || NOTE_URL === 'ここにURLを入れる') {
+      showToast('note記事のURLが未設定です（NOTE_URLを設定してください）');
+      return;
+    }
+    window.open(NOTE_URL, '_blank');
+  }
+
+  function showToast(message) {
+    const toast = document.getElementById('toast');
+    toast.textContent = message;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2600);
+  }
+
+  function shareResult() {
+    const text = document.getElementById('sharePreview').textContent;
+    if (navigator.share) {
+      navigator.share({ text: text }).catch(() => copyToClipboard(text));
+    } else {
+      copyToClipboard(text);
+    }
+  }
+
+  function copyToClipboard(text) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text)
+        .then(() => showToast('診断結果をコピーしました！Instagramストーリーズに貼り付けてシェアしてね'))
+        .catch(() => legacyCopy(text));
+    } else {
+      legacyCopy(text);
+    }
+  }
+
+  function legacyCopy(text) {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+    try {
+      document.execCommand('copy');
+      showToast('診断結果をコピーしました！Instagramストーリーズに貼り付けてシェアしてね');
+    } catch (e) {
+      showToast('コピーできませんでした。上のテキストを手動でコピーしてください');
+    }
+    document.body.removeChild(textarea);
+  }
+
+  window.onload = populateSelects;
+</script>
+</body>
+</html>
