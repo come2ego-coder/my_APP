@@ -388,7 +388,7 @@
     const baseDate = new Date(2000, 0, 1);
     const targetDate = new Date(year, month - 1, day);
     const diffDays = Math.floor((targetDate - baseDate) / (1000 * 60 * 60 * 24));
-    const index = (52 + diffDays + 60000) % 60;
+    const index = (54 + diffDays + 60000) % 60;
     return getKanshi(index);
   }
 
