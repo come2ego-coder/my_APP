@@ -245,36 +245,6 @@
 
   .success-text { font-size: 1.02em; color: var(--text); }
 
-  .share-box { text-align: center; }
-  .share-preview {
-    background: var(--locked-bg);
-    border-radius: 10px;
-    padding: 14px;
-    margin-top: 14px;
-    font-size: 0.95em;
-    color: var(--text);
-    text-align: left;
-    white-space: pre-wrap;
-  }
-  .toast {
-    position: fixed;
-    left: 50%;
-    bottom: 24px;
-    transform: translateX(-50%);
-    background: var(--primary-dark);
-    color: #fff;
-    padding: 12px 20px;
-    border-radius: 10px;
-    font-size: 0.95em;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity .3s ease;
-    max-width: 90%;
-    text-align: center;
-    z-index: 999;
-  }
-  .toast.show { opacity: 1; }
-
   .restart-row { text-align: center; margin-top: 8px; }
 
   .disclaimer {
@@ -404,12 +374,6 @@
       <ul class="plain-list" id="starLearning"></ul>
     </div>
 
-    <div class="card share-box">
-      <h2 class="section-title">📱 友達にもシェアしよう</h2>
-      <button class="btn btn-outline" onclick="shareResult()">診断結果をInstagramストーリーズでシェアする</button>
-      <div class="share-preview" id="sharePreview"></div>
-    </div>
-
     <div class="restart-row">
       <button class="btn btn-outline" onclick="resetDiagnosis()">もう一度診断する</button>
     </div>
@@ -421,8 +385,6 @@
   </div>
 
 </div>
-
-<div class="toast" id="toast"></div>
 
 <script>
   const TENKAN = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸'];
@@ -733,7 +695,6 @@
     return STAR_MAP[nicchi.kan][gekkan.kan];
   }
 
-  let currentStarLabel = '';
   let currentStarRoot = '';
 
   function runDiagnosis() {
@@ -789,12 +750,8 @@
     document.getElementById('starLearning').innerHTML = data.learning
       .map(item => `<li>${item}</li>`).join('');
 
-    currentStarLabel = data.label;
     currentStarRoot = starGekkan;
     document.getElementById('compatResult').classList.remove('show');
-
-    const shareText = `私は【${data.label}】でした！あなたは？\n→ ${location.href.split('?')[0].split('#')[0]}`;
-    document.getElementById('sharePreview').textContent = shareText;
 
     const resultSection = document.getElementById('resultSection');
     resultSection.classList.add('show');
@@ -837,49 +794,6 @@
   function resetDiagnosis() {
     document.getElementById('resultSection').classList.remove('show');
     document.getElementById('inputCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
-
-  function showToast(message) {
-    const toast = document.getElementById('toast');
-    toast.textContent = message;
-    toast.classList.add('show');
-    setTimeout(() => toast.classList.remove('show'), 2600);
-  }
-
-  function shareResult() {
-    const text = document.getElementById('sharePreview').textContent;
-    if (navigator.share) {
-      navigator.share({ text: text }).catch(() => copyToClipboard(text));
-    } else {
-      copyToClipboard(text);
-    }
-  }
-
-  function copyToClipboard(text) {
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(text)
-        .then(() => showToast('診断結果をコピーしました！Instagramストーリーズに貼り付けてシェアしてね'))
-        .catch(() => legacyCopy(text));
-    } else {
-      legacyCopy(text);
-    }
-  }
-
-  function legacyCopy(text) {
-    const textarea = document.createElement('textarea');
-    textarea.value = text;
-    textarea.style.position = 'fixed';
-    textarea.style.opacity = '0';
-    document.body.appendChild(textarea);
-    textarea.focus();
-    textarea.select();
-    try {
-      document.execCommand('copy');
-      showToast('診断結果をコピーしました！Instagramストーリーズに貼り付けてシェアしてね');
-    } catch (e) {
-      showToast('コピーできませんでした。上のテキストを手動でコピーしてください');
-    }
-    document.body.removeChild(textarea);
   }
 
   window.onload = populateSelects;
