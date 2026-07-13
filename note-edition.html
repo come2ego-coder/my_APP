@@ -149,12 +149,67 @@
     color: var(--primary-dark);
     margin-bottom: 10px;
   }
+  .star-name rt {
+    font-size: 0.4em;
+    font-weight: normal;
+    color: var(--muted);
+  }
   .star-oneliner {
     font-size: 1.05em;
     color: var(--text);
   }
 
   .overview-text { font-size: 1.02em; color: var(--text); }
+
+  .monthly-hint {
+    background: linear-gradient(135deg, #fff6ec 0%, #fdf1e6 100%);
+    border: 1px solid var(--border);
+  }
+  .monthly-label {
+    display: inline-block;
+    background: var(--accent);
+    color: #fff;
+    font-size: 0.85em;
+    font-weight: bold;
+    padding: 4px 12px;
+    border-radius: 999px;
+    margin-bottom: 12px;
+  }
+  .monthly-text { font-size: 1.02em; color: var(--text); }
+
+  .compat-check-form {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .compat-check-form select {
+    flex: 1;
+    padding: 12px 6px;
+    font-size: 1em;
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    background: #fff;
+    color: var(--text);
+    min-height: 48px;
+  }
+  .compat-result {
+    display: none;
+    background: var(--locked-bg);
+    border-radius: 12px;
+    padding: 16px;
+    margin-top: 4px;
+  }
+  .compat-result.show { display: block; }
+  .compat-result .compat-result-star {
+    font-weight: bold;
+    color: var(--primary-dark);
+    font-size: 1.1em;
+    margin-bottom: 8px;
+  }
+  .compat-result .compat-result-verdict {
+    font-size: 0.95em;
+    color: var(--text);
+  }
 
   .plain-list { list-style: none; }
   .plain-list li {
@@ -288,6 +343,12 @@
       <div class="star-oneliner" id="starOneliner"></div>
     </div>
 
+    <div class="card monthly-hint">
+      <span class="monthly-label" id="monthlyLabel"></span>
+      <h2 class="section-title">🌙 今月のあなたへの一言</h2>
+      <p class="monthly-text" id="monthlyText"></p>
+    </div>
+
     <div class="card">
       <h2 class="section-title">🎯 ビジネスタイプの概要</h2>
       <p class="overview-text" id="starOverview"></p>
@@ -316,6 +377,21 @@
     <div class="card">
       <h2 class="section-title">🤝 相性の良いパートナー</h2>
       <ul class="compat-list" id="starCompat"></ul>
+    </div>
+
+    <div class="card">
+      <h2 class="section-title">🔗 気になる人との相性を診断</h2>
+      <p class="meishiki-note" style="margin-bottom: 14px; text-align: left;">パートナーや同僚など、気になる人の生年月日を入れてみましょう。</p>
+      <div class="compat-check-form">
+        <select id="partnerYear" aria-label="お相手の年"></select>
+        <select id="partnerMonth" aria-label="お相手の月"></select>
+        <select id="partnerDay" aria-label="お相手の日"></select>
+      </div>
+      <button class="btn btn-outline" onclick="checkCompatibility()">相性を診断する</button>
+      <div class="compat-result" id="compatResult">
+        <div class="compat-result-star" id="compatResultStar"></div>
+        <div class="compat-result-verdict" id="compatResultVerdict"></div>
+      </div>
     </div>
 
     <div class="card">
@@ -370,6 +446,7 @@
   const STAR_DATA = {
     '貫索': {
       label: '貫索星（独立型）',
+      reading: 'かんさくせい',
       oneLiner: '自分の軸を大切にし、周囲に流されず生きる独立独歩の人。',
       overview: '会社員よりも、自分の裁量で動ける環境で本来の力を発揮するタイプです。専門性を深めるほど信頼が集まり、人に振り回されない生き方が向いています。',
       color: '#228b22', colorName: '緑',
@@ -387,6 +464,7 @@
     },
     '石門': {
       label: '石門星（組織型）',
+      reading: 'せきもんせい',
       oneLiner: '人とのつながりを大切にし、チームの中で力を発揮する人。',
       overview: '一人で完結するより、仲間と協力しながら物事を進める方が得意です。人脈の広さや調整力が、あなたの一番の強みになります。',
       color: '#d99a2b', colorName: 'オレンジ',
@@ -404,6 +482,7 @@
     },
     '鳳閣': {
       label: '鳳閣星（表現型）',
+      reading: 'ほうかくせい',
       oneLiner: '明るく自然体で、人を楽しませる才能を持つ人。',
       overview: '自分らしさを表現したり、情報を発信することで輝くタイプです。堅苦しさより楽しさを大切にすると、自然と人が集まってきます。',
       color: '#d1553f', colorName: '赤',
@@ -421,6 +500,7 @@
     },
     '調舒': {
       label: '調舒星（創造型）',
+      reading: 'ちょうじょせい',
       oneLiner: '独自の感性を持ち、こだわりの世界観を大切にする人。',
       overview: '多くの人に合わせるより、自分にしか作れないものを追求する方が力を発揮します。感性を活かした表現が、あなたらしさそのものです。',
       color: '#8266b3', colorName: '紫',
@@ -438,6 +518,7 @@
     },
     '禄存': {
       label: '禄存星（投資型）',
+      reading: 'ろくぞんせい',
       oneLiner: '人やお金を動かす力があり、スケールの大きな発想をする人。',
       overview: '小さくまとめるより、大きく展開する方が向いているタイプです。人を巻き込みながら物事を大きくしていく発想力があります。',
       color: '#c9a227', colorName: '金',
@@ -455,6 +536,7 @@
     },
     '司禄': {
       label: '司禄星（蓄積型）',
+      reading: 'しろくせい',
       oneLiner: 'コツコツと積み上げ、着実に安定を築いていく人。',
       overview: '一気に結果を求めるより、時間をかけて信頼と資産を積み上げるのが得意です。長く続けることで、ゆるぎない安定を手にします。',
       color: '#8b5e34', colorName: '茶',
@@ -472,6 +554,7 @@
     },
     '車騎': {
       label: '車騎星（行動型）',
+      reading: 'しゃきせい',
       oneLiner: '考えるより先に動き、現場で結果を出す行動派の人。',
       overview: 'じっくり考えるよりも、まず動いてみることで道が開けるタイプです。フットワークの軽さとスピード感があなたの武器です。',
       color: '#c15a2e', colorName: 'オレンジレッド',
@@ -489,6 +572,7 @@
     },
     '牽牛': {
       label: '牽牛星（権威型）',
+      reading: 'けんぎゅうせい',
       oneLiner: '誠実さと責任感を大切にし、信頼を積み重ねる人。',
       overview: '肩書きや実績を大切にしながら、コツコツと社会的な信用を築いていくタイプです。真面目に積み重ねた努力が、やがて大きな評価につながります。',
       color: '#9a9a9a', colorName: '銀',
@@ -506,6 +590,7 @@
     },
     '龍高': {
       label: '龍高星（革新型）',
+      reading: 'りゅうこうせい',
       oneLiner: '常に新しいことに挑戦し、変化を楽しむ人。',
       overview: '同じことの繰り返しより、新しい知識や環境に触れることで力を発揮するタイプです。変化を恐れない好奇心が、あなたを成長させます。',
       color: '#2f8fc0', colorName: '青',
@@ -523,6 +608,7 @@
     },
     '玉堂': {
       label: '玉堂星（教育型）',
+      reading: 'ぎょくどうせい',
       oneLiner: '深い知識と思いやりを持ち、人に伝えることが得意な人。',
       overview: '学んだことを整理し、わかりやすく人に伝えることで力を発揮するタイプです。教えたり導いたりすることに、自然な喜びを感じます。',
       color: '#4169e1', colorName: 'ロイヤルブルー',
@@ -538,6 +624,20 @@
       successCase: 'ビジネスコンサルタントとして、オンライン講座とコンサルティングで月収120万円。受講生は累計2,000人を超える。',
       learning: ['教授法・ファシリテーション', 'コンサルティング手法', 'オンライン講座の作り方', '知識の体系化・図解化']
     }
+  };
+
+  // 中心星（日干×月干）を基準にした「今月のあなたへの一言」
+  const MONTHLY_HINT = {
+    '貫索': '今月は、自分のペースを大切にすることで運気が安定します。人に振り回されず、自分の軸を信じて動きましょう。',
+    '石門': '今月は、人とのつながりが幸運の鍵になります。連絡を取っていなかった人に、思い切って声をかけてみましょう。',
+    '鳳閣': '今月は、楽しさを優先すると良い流れが来ます。発信や表現の場に、積極的に顔を出してみましょう。',
+    '調舒': '今月は、自分の感性を大事にすると力が湧いてきます。無理に周りに合わせず、心地よいペースで過ごしましょう。',
+    '禄存': '今月は、大きな視点で物事を考えると運が開けます。小さくまとまらず、思い切った決断をしてみましょう。',
+    '司禄': '今月は、コツコツ続けてきたことが実を結びやすいタイミングです。焦らず、いつも通りの積み重ねを大切に。',
+    '車騎': '今月は、行動が運を呼び込みます。迷っている暇があったら、まず一歩踏み出してみましょう。',
+    '牽牛': '今月は、誠実な努力が評価されやすい時期です。信頼を積み重ねる行動を、意識してみましょう。',
+    '龍高': '今月は、新しい挑戦が吉と出ます。気になっていた分野に、思い切って手を伸ばしてみましょう。',
+    '玉堂': '今月は、学びや情報整理が運気を高めます。誰かに教えたり、知識を発信してみると良いでしょう。'
   };
 
   function getKanshi(index) {
@@ -575,10 +675,10 @@
     return new Date(year, month, 0).getDate();
   }
 
-  function populateSelects() {
-    const selYear = document.getElementById('selYear');
-    const selMonth = document.getElementById('selMonth');
-    const selDay = document.getElementById('selDay');
+  function setupDateSelects(yearId, monthId, dayId) {
+    const selYear = document.getElementById(yearId);
+    const selMonth = document.getElementById(monthId);
+    const selDay = document.getElementById(dayId);
     const currentYear = new Date().getFullYear();
 
     for (let y = currentYear; y >= currentYear - 100; y--) {
@@ -622,7 +722,19 @@
     selDay.value = new Date().getDate();
   }
 
+  function populateSelects() {
+    setupDateSelects('selYear', 'selMonth', 'selDay');
+    setupDateSelects('partnerYear', 'partnerMonth', 'partnerDay');
+  }
+
+  function getStarRoot(year, month, day) {
+    const gekkan = getGekkan(year, month);
+    const nicchi = getNicchi(year, month, day);
+    return STAR_MAP[nicchi.kan][gekkan.kan];
+  }
+
   let currentStarLabel = '';
+  let currentStarRoot = '';
 
   function runDiagnosis() {
     const year = parseInt(document.getElementById('selYear').value, 10);
@@ -642,9 +754,21 @@
 
     document.getElementById('starDot').style.backgroundColor = data.color;
     document.getElementById('starColorName').textContent = 'ラッキーカラー：' + data.colorName;
-    document.getElementById('starName').textContent = data.label;
+
+    const labelParts = data.label.split('（');
+    document.getElementById('starName').innerHTML =
+      `<ruby>${labelParts[0]}<rt>${data.reading}</rt></ruby>（${labelParts[1]}`;
+
     document.getElementById('starOneliner').textContent = data.oneLiner;
     document.getElementById('starOverview').textContent = data.overview;
+
+    const today = new Date();
+    const curYear = today.getFullYear();
+    const curMonth = today.getMonth() + 1;
+    const curGekkan = getGekkan(curYear, curMonth);
+    const monthlyStarRoot = STAR_MAP[nicchi.kan][curGekkan.kan];
+    document.getElementById('monthlyLabel').textContent = `${curYear}年${curMonth}月`;
+    document.getElementById('monthlyText').textContent = MONTHLY_HINT[monthlyStarRoot];
 
     document.getElementById('starJobs').innerHTML = data.jobs
       .map(job => `<li>${job}</li>`).join('');
@@ -666,12 +790,48 @@
       .map(item => `<li>${item}</li>`).join('');
 
     currentStarLabel = data.label;
+    currentStarRoot = starGekkan;
+    document.getElementById('compatResult').classList.remove('show');
+
     const shareText = `私は【${data.label}】でした！あなたは？\n→ ${location.href.split('?')[0].split('#')[0]}`;
     document.getElementById('sharePreview').textContent = shareText;
 
     const resultSection = document.getElementById('resultSection');
     resultSection.classList.add('show');
     resultSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function checkCompatibility() {
+    if (!currentStarRoot) return;
+
+    const pYear = parseInt(document.getElementById('partnerYear').value, 10);
+    const pMonth = parseInt(document.getElementById('partnerMonth').value, 10);
+    const pDay = parseInt(document.getElementById('partnerDay').value, 10);
+
+    const partnerRoot = getStarRoot(pYear, pMonth, pDay);
+    const partnerData = STAR_DATA[partnerRoot];
+    const myData = STAR_DATA[currentStarRoot];
+
+    const partnerLabel = partnerRoot + '星';
+    const matchFromMine = myData.compatibility.find(c => c.type === partnerLabel);
+    const matchFromPartner = partnerData.compatibility.find(c => c.type === currentStarRoot + '星');
+    const match = matchFromMine || matchFromPartner;
+
+    const resultBox = document.getElementById('compatResult');
+    document.getElementById('compatResultStar').textContent = `お相手は「${partnerData.label}」`;
+
+    if (partnerRoot === currentStarRoot) {
+      document.getElementById('compatResultVerdict').textContent =
+        '同じタイプ同士。似た価値観で分かり合える一方、似た者同士ゆえの弱点も共通しがちです。お互いの強みを高め合う意識を持つとより良い関係になります。';
+    } else if (match) {
+      document.getElementById('compatResultVerdict').textContent =
+        `相性◎：${match.reason}`;
+    } else {
+      document.getElementById('compatResultVerdict').textContent =
+        'データ上の特別な組み合わせではありませんが、タイプが違うからこそ学び合える関係かもしれません。お互いの「向いている仕事・副業」を見比べてみると、意外な発見があるかもしれません。';
+    }
+
+    resultBox.classList.add('show');
   }
 
   function resetDiagnosis() {
