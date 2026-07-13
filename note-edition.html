@@ -156,6 +156,40 @@
 
   .overview-text { font-size: 1.02em; color: var(--text); }
 
+  .plain-list { list-style: none; }
+  .plain-list li {
+    padding: 10px 0 10px 28px;
+    position: relative;
+    border-bottom: 1px solid var(--border);
+    font-size: 1em;
+  }
+  .plain-list li:last-child { border-bottom: none; }
+  .plain-list li::before {
+    content: '・';
+    position: absolute;
+    left: 6px;
+    color: var(--primary);
+    font-weight: bold;
+  }
+
+  .compat-list { list-style: none; }
+  .compat-item {
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .compat-item:last-child { border-bottom: none; }
+  .compat-item .compat-type {
+    font-weight: bold;
+    color: var(--primary-dark);
+    margin-bottom: 4px;
+  }
+  .compat-item .compat-reason {
+    font-size: 0.92em;
+    color: var(--muted);
+  }
+
+  .success-text { font-size: 1.02em; color: var(--text); }
+
   .share-box { text-align: center; }
   .share-preview {
     background: var(--locked-bg);
@@ -259,6 +293,26 @@
       <p class="overview-text" id="starOverview"></p>
     </div>
 
+    <div class="card">
+      <h2 class="section-title">💼 向いている仕事・副業</h2>
+      <ul class="plain-list" id="starJobs"></ul>
+    </div>
+
+    <div class="card">
+      <h2 class="section-title">🤝 相性の良いパートナー</h2>
+      <ul class="compat-list" id="starCompat"></ul>
+    </div>
+
+    <div class="card">
+      <h2 class="section-title">📈 成功イメージ</h2>
+      <p class="success-text" id="starSuccessCase"></p>
+    </div>
+
+    <div class="card">
+      <h2 class="section-title">🎓 おすすめの学び</h2>
+      <ul class="plain-list" id="starLearning"></ul>
+    </div>
+
     <div class="card share-box">
       <h2 class="section-title">📱 友達にもシェアしよう</h2>
       <button class="btn btn-outline" onclick="shareResult()">診断結果をInstagramストーリーズでシェアする</button>
@@ -303,61 +357,141 @@
       label: '貫索星（独立型）',
       oneLiner: '自分の軸を大切にし、周囲に流されず生きる独立独歩の人。',
       overview: '会社員よりも、自分の裁量で動ける環境で本来の力を発揮するタイプです。専門性を深めるほど信頼が集まり、人に振り回されない生き方が向いています。',
-      color: '#228b22', colorName: '緑'
+      color: '#228b22', colorName: '緑',
+      jobs: ['フリーランスエンジニア・デザイナー', '個人コンサルタント・専門家', '職人（料理人、工芸家など）', '士業（税理士、弁護士など）', '一人で完結する専門職'],
+      compatibility: [
+        { type: '石門星', reason: '独立性×社交性で補完関係' },
+        { type: '司禄星', reason: '専門性×安定性で強固な基盤' },
+        { type: '鳳閣星', reason: '職人×表現で相乗効果' }
+      ],
+      successCase: 'フリーランスエンジニアとして独立後、特定分野（AI開発）に特化することで月収80万円を達成。顧客からの信頼も厚く、紹介だけで仕事が回るように。',
+      learning: ['専門スキルの深化（プログラミング、デザインなど）', '時間管理術', '個人ブランディング', 'フリーランス向け営業術']
     },
     '石門': {
       label: '石門星（組織型）',
       oneLiner: '人とのつながりを大切にし、チームの中で力を発揮する人。',
       overview: '一人で完結するより、仲間と協力しながら物事を進める方が得意です。人脈の広さや調整力が、あなたの一番の強みになります。',
-      color: '#d99a2b', colorName: 'オレンジ'
+      color: '#d99a2b', colorName: 'オレンジ',
+      jobs: ['組織マネージャー・人事', '人材育成・研修講師', 'コミュニティ運営・イベント企画', 'ネットワークビジネス', 'PR・広報担当'],
+      compatibility: [
+        { type: '貫索星', reason: '社交性×専門性で最強タッグ' },
+        { type: '車騎星', reason: '企画×実行で即戦力' },
+        { type: '禄存星', reason: '人脈×資金で大型案件' }
+      ],
+      successCase: 'オンラインサロンを立ち上げ、会員300人で月商90万円。さらにアフィリエイト紹介報酬と法人コンサルで月収150万円を実現。人脈が最大の資産に。',
+      learning: ['コミュニケーションスキル', 'SNSマーケティング', 'コミュニティ運営術', '人脈構築の技術']
     },
     '鳳閣': {
       label: '鳳閣星（表現型）',
       oneLiner: '明るく自然体で、人を楽しませる才能を持つ人。',
       overview: '自分らしさを表現したり、情報を発信することで輝くタイプです。堅苦しさより楽しさを大切にすると、自然と人が集まってきます。',
-      color: '#d1553f', colorName: '赤'
+      color: '#d1553f', colorName: '赤',
+      jobs: ['YouTuber・TikToker・インフルエンサー', 'ブロガー・ライター', '飲食店経営', 'MC・司会業', 'エンターテイメント関連'],
+      compatibility: [
+        { type: '調舒星', reason: '表現×創造で芸術的コンテンツ' },
+        { type: '車騎星', reason: 'アイデア×行動力で即展開' },
+        { type: '石門星', reason: '発信×人脈で拡散力アップ' }
+      ],
+      successCase: 'グルメ系YouTuberとして登録者10万人を達成。企業案件月5本で50万円、広告収入20万円、自社商品販売30万円で月収100万円超え。',
+      learning: ['動画編集・撮影技術', 'コンテンツマーケティング', 'ストーリーテリング', 'SNS運用テクニック']
     },
     '調舒': {
       label: '調舒星（創造型）',
       oneLiner: '独自の感性を持ち、こだわりの世界観を大切にする人。',
       overview: '多くの人に合わせるより、自分にしか作れないものを追求する方が力を発揮します。感性を活かした表現が、あなたらしさそのものです。',
-      color: '#8266b3', colorName: '紫'
+      color: '#8266b3', colorName: '紫',
+      jobs: ['デザイナー（グラフィック・Web・ファッション）', '作家・小説家・脚本家', '画家・イラストレーター', 'ハンドメイド作家', '音楽家・作曲家'],
+      compatibility: [
+        { type: '鳳閣星', reason: '創造×伝達で作品が届く' },
+        { type: '牽牛星', reason: '芸術×ブランドで高付加価値' },
+        { type: '玉堂星', reason: '感性×論理で完成度アップ' }
+      ],
+      successCase: 'ハンドメイドアクセサリー作家として、Instagram経由で月商80万円。ファン100人のリピート購入で安定収入。展示会でも完売続出。',
+      learning: ['デザインソフト（Photoshop、Illustratorなど）', 'ブランディング戦略', '価格設定の心理学', '作品販売プラットフォーム活用']
     },
     '禄存': {
       label: '禄存星（投資型）',
       oneLiner: '人やお金を動かす力があり、スケールの大きな発想をする人。',
       overview: '小さくまとめるより、大きく展開する方が向いているタイプです。人を巻き込みながら物事を大きくしていく発想力があります。',
-      color: '#c9a227', colorName: '金'
+      color: '#c9a227', colorName: '金',
+      jobs: ['投資家（株式・不動産・FX）', '事業プロデューサー', 'M&Aアドバイザー', '不動産仲介・投資', '金融コンサルタント'],
+      compatibility: [
+        { type: '石門星', reason: '資金×人脈で大規模展開' },
+        { type: '龍高星', reason: '投資×革新で未来型ビジネス' },
+        { type: '牽牛星', reason: '財×権威で社会的成功' }
+      ],
+      successCase: '不動産投資で3棟のアパート経営。月の家賃収入150万円。さらにM&Aアドバイザーとして成功報酬で年収3,000万円超え。',
+      learning: ['投資の基礎（株式、不動産、FX）', '財務・会計知識', '交渉術', '大型プロジェクトマネジメント']
     },
     '司禄': {
       label: '司禄星（蓄積型）',
       oneLiner: 'コツコツと積み上げ、着実に安定を築いていく人。',
       overview: '一気に結果を求めるより、時間をかけて信頼と資産を積み上げるのが得意です。長く続けることで、ゆるぎない安定を手にします。',
-      color: '#8b5e34', colorName: '茶'
+      color: '#8b5e34', colorName: '茶',
+      jobs: ['サブスクリプションビジネス', '会員制サービス運営', '不動産オーナー', 'ブログ・アフィリエイト（長期）', '印税ビジネス'],
+      compatibility: [
+        { type: '貫索星', reason: '安定×専門性で長期成功' },
+        { type: '玉堂星', reason: '蓄積×教育で継続収入' },
+        { type: '牽牛星', reason: '信頼×権威で盤石な基盤' }
+      ],
+      successCase: '月額制オンライン講座を運営し、受講生500人で月収100万円。3年継続で累計3,600万円の安定収入を構築。',
+      learning: ['サブスクリプションビジネスモデル', '顧客維持戦略', '長期資産形成', '契約・継続の仕組み化']
     },
     '車騎': {
       label: '車騎星（行動型）',
       oneLiner: '考えるより先に動き、現場で結果を出す行動派の人。',
       overview: 'じっくり考えるよりも、まず動いてみることで道が開けるタイプです。フットワークの軽さとスピード感があなたの武器です。',
-      color: '#c15a2e', colorName: 'オレンジレッド'
+      color: '#c15a2e', colorName: 'オレンジレッド',
+      jobs: ['営業（保険・不動産・車など）', 'トレーダー（株・FX・仮想通貨）', '転売・せどり', 'イベント企画・運営', 'スポーツビジネス'],
+      compatibility: [
+        { type: '石門星', reason: '行動×人脈で即成果' },
+        { type: '鳳閣星', reason: 'スピード×表現で話題性' },
+        { type: '龍高星', reason: '実行×革新で市場開拓' }
+      ],
+      successCase: '保険営業でトップセールスを達成。月間50件の訪問で成約率25%、平均単価8万円で月収100万円。社内MVPを3年連続受賞。',
+      learning: ['営業トーク術', 'クロージング技術', 'トレード手法（テクニカル分析）', '高速PDCA実践法']
     },
     '牽牛': {
       label: '牽牛星（権威型）',
       oneLiner: '誠実さと責任感を大切にし、信頼を積み重ねる人。',
       overview: '肩書きや実績を大切にしながら、コツコツと社会的な信用を築いていくタイプです。真面目に積み重ねた努力が、やがて大きな評価につながります。',
-      color: '#9a9a9a', colorName: '銀'
+      color: '#9a9a9a', colorName: '銀',
+      jobs: ['弁護士・税理士・会計士', '医師・歯科医師', '企業経営者・役員', 'ブランドコンサルタント', '高級サービス業'],
+      compatibility: [
+        { type: '司禄星', reason: '権威×安定で社会的信用' },
+        { type: '禄存星', reason: 'ブランド×財で高級路線' },
+        { type: '調舒星', reason: '名誉×芸術で文化的価値' }
+      ],
+      successCase: '税理士として独立開業。顧問先50社を抱え月収200万円。セミナー講師としても活動し、権威性を確立。著書も出版。',
+      learning: ['資格取得（士業など）', 'パーソナルブランディング', 'プレゼンテーション技術', 'メディア露出戦略']
     },
     '龍高': {
       label: '龍高星（革新型）',
       oneLiner: '常に新しいことに挑戦し、変化を楽しむ人。',
       overview: '同じことの繰り返しより、新しい知識や環境に触れることで力を発揮するタイプです。変化を恐れない好奇心が、あなたを成長させます。',
-      color: '#2f8fc0', colorName: '青'
+      color: '#2f8fc0', colorName: '青',
+      jobs: ['ITエンジニア・プログラマー', 'AI・データサイエンティスト', '海外ビジネス・貿易', '新規事業開発', 'スタートアップ起業'],
+      compatibility: [
+        { type: '禄存星', reason: '革新×投資で最先端ビジネス' },
+        { type: '車騎星', reason: '変化×行動で新市場制覇' },
+        { type: '玉堂星', reason: '習得×知識で専門性の深化' }
+      ],
+      successCase: 'AIエンジニアとして最新技術を習得。フリーランスで月収150万円。海外案件も受注し、年収2,000万円を突破。',
+      learning: ['最新技術（AI、Web3、ブロックチェーン）', '英語・海外ビジネス', 'スタートアップ経営', 'イノベーション思考']
     },
     '玉堂': {
       label: '玉堂星（教育型）',
       oneLiner: '深い知識と思いやりを持ち、人に伝えることが得意な人。',
       overview: '学んだことを整理し、わかりやすく人に伝えることで力を発揮するタイプです。教えたり導いたりすることに、自然な喜びを感じます。',
-      color: '#4169e1', colorName: 'ロイヤルブルー'
+      color: '#4169e1', colorName: 'ロイヤルブルー',
+      jobs: ['研修講師・セミナー講師', 'コンサルタント', '学習塾経営', 'オンライン講座運営', 'ビジネスコーチ'],
+      compatibility: [
+        { type: '司禄星', reason: '教育×蓄積で長期資産' },
+        { type: '龍高星', reason: '知識×革新で最新情報' },
+        { type: '牽牛星', reason: '論理×権威で信頼性アップ' }
+      ],
+      successCase: 'ビジネスコンサルタントとして、オンライン講座とコンサルティングで月収120万円。受講生は累計2,000人を超える。',
+      learning: ['教授法・ファシリテーション', 'コンサルティング手法', 'オンライン講座の作り方', '知識の体系化・図解化']
     }
   };
 
@@ -466,6 +600,17 @@
     document.getElementById('starName').textContent = data.label;
     document.getElementById('starOneliner').textContent = data.oneLiner;
     document.getElementById('starOverview').textContent = data.overview;
+
+    document.getElementById('starJobs').innerHTML = data.jobs
+      .map(job => `<li>${job}</li>`).join('');
+
+    document.getElementById('starCompat').innerHTML = data.compatibility
+      .map(c => `<li class="compat-item"><div class="compat-type">${c.type}</div><div class="compat-reason">${c.reason}</div></li>`).join('');
+
+    document.getElementById('starSuccessCase').textContent = data.successCase;
+
+    document.getElementById('starLearning').innerHTML = data.learning
+      .map(item => `<li>${item}</li>`).join('');
 
     currentStarLabel = data.label;
     const shareText = `私は【${data.label}】でした！あなたは？\n→ ${location.href.split('?')[0].split('#')[0]}`;
