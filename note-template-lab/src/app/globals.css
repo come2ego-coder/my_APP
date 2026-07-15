@@ -1,0 +1,42 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html,
+body {
+  background-color: #f7f3ea;
+  color: #2c2a28;
+}
+
+body {
+  background-image: radial-gradient(
+      circle at 15% 20%,
+      rgba(166, 124, 82, 0.05),
+      transparent 45%
+    ),
+    radial-gradient(
+      circle at 85% 75%,
+      rgba(60, 90, 102, 0.05),
+      transparent 45%
+    );
+  background-attachment: fixed;
+}
+
+@layer utilities {
+  .tap-target {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .stamp-rotate {
+    transform: rotate(-11deg);
+  }
+}
+
+textarea,
+input {
+  outline: none;
+}
