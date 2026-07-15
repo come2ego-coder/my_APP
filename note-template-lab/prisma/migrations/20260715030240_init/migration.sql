@@ -1,6 +1,6 @@
 -- CreateTable
 CREATE TABLE "Article" (
-    "id" TEXT NOT NULL PRIMARY KEY,
+    "id" TEXT NOT NULL,
     "genre" TEXT NOT NULL,
     "cutLabel" TEXT NOT NULL,
     "cutDescription" TEXT NOT NULL,
@@ -10,5 +10,7 @@ CREATE TABLE "Article" (
     "title" TEXT NOT NULL,
     "body" TEXT NOT NULL,
     "advice" TEXT NOT NULL,
-    "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "Article_pkey" PRIMARY KEY ("id")
 );
