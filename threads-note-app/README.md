@@ -31,3 +31,6 @@ npm run dev
    - Root Directory に `threads-note-app` を指定する。
 2. Vercelのプロジェクト設定 → Environment Variables に `ANTHROPIC_API_KEY` を追加する。
 3. デプロイ後に発行されるURLをスマホのSafari/Chromeでブックマークして使う。
+
+Root DirectoryやEnvironment Variablesの設定をVercel側で変更した場合は、
+このリポジトリに何かpushすると自動で再デプロイされます。
