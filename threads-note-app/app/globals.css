@@ -1,0 +1,27 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f6f1eb;
+  --foreground: #2a1b3d;
+  --plum: #3b2352;
+  --plum-deep: #2a1739;
+  --gold: #b8912f;
+  --gold-light: #d9b45c;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-plum: var(--plum);
+  --color-plum-deep: var(--plum-deep);
+  --color-gold: var(--gold);
+  --color-gold-light: var(--gold-light);
+  --font-mincho: var(--font-mincho);
+  --font-gothic: var(--font-gothic);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-gothic), "Hiragino Kaku Gothic ProN", sans-serif;
+}
