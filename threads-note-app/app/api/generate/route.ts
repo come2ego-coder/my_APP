@@ -1,4 +1,4 @@
-import Anthropic from "@anthropic-ai/sdk";
+import { GoogleGenAI, ApiError } from "@google/genai";
 import { NextResponse } from "next/server";
 import { PATTERNS } from "@/lib/patterns";
 
@@ -49,11 +49,11 @@ export async function POST(request: Request) {
     );
   }
 
-  if (!process.env.ANTHROPIC_API_KEY) {
+  if (!process.env.GEMINI_API_KEY) {
     return NextResponse.json(
       {
         error:
-          "サーバーにANTHROPIC_API_KEYが設定されていません。.envファイルを確認してください。",
+          "サーバーにGEMINI_API_KEYが設定されていません。.envファイルを確認してください。",
       },
       { status: 500 },
     );
@@ -72,30 +72,24 @@ ${content.trim()}
 見出しや番号、前置き・後書きの説明文は一切つけないでください。`;
 
   try {
-    const client = new Anthropic();
-    const response = await client.messages.create({
-      model: process.env.ANTHROPIC_MODEL || "claude-opus-4-8",
-      max_tokens: 2048,
-      system: STYLE_RULES,
-      messages: [{ role: "user", content: userPrompt }],
+    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    const response = await ai.models.generateContent({
+      model: process.env.GEMINI_MODEL || "gemini-2.5-flash",
+      contents: userPrompt,
+      config: {
+        systemInstruction: STYLE_RULES,
+      },
     });
 
-    if (response.stop_reason === "refusal") {
-      return NextResponse.json(
-        { error: "内容の生成がAIによって拒否されました。ネタの内容を変えて試してください。" },
-        { status: 422 },
-      );
-    }
-
-    const textBlock = response.content.find((b) => b.type === "text");
-    if (!textBlock || textBlock.type !== "text") {
+    const text = response.text;
+    if (!text) {
       return NextResponse.json(
         { error: "AIからテキストの応答が得られませんでした。もう一度お試しください。" },
         { status: 502 },
       );
     }
 
-    const drafts = textBlock.text
+    const drafts = text
       .split(SPLIT_MARKER)
       .map((d) => d.trim())
       .filter((d) => d.length > 0);
@@ -109,22 +103,22 @@ ${content.trim()}
 
     return NextResponse.json({ drafts });
   } catch (error) {
-    if (error instanceof Anthropic.AuthenticationError) {
-      return NextResponse.json(
-        { error: "APIキーが無効です。ANTHROPIC_API_KEYの設定を確認してください。" },
-        { status: 401 },
-      );
-    }
-    if (error instanceof Anthropic.RateLimitError) {
-      return NextResponse.json(
-        { error: "アクセスが集中しています。しばらく待ってからもう一度お試しください。" },
-        { status: 429 },
-      );
-    }
-    if (error instanceof Anthropic.APIError) {
+    if (error instanceof ApiError) {
+      if (error.status === 401 || error.status === 403) {
+        return NextResponse.json(
+          { error: "APIキーが無効です。GEMINI_API_KEYの設定を確認してください。" },
+          { status: 401 },
+        );
+      }
+      if (error.status === 429) {
+        return NextResponse.json(
+          { error: "アクセスが集中しているか、無料枠の上限に達しました。しばらく待ってからもう一度お試しください。" },
+          { status: 429 },
+        );
+      }
       return NextResponse.json(
         { error: `AIとの通信でエラーが発生しました: ${error.message}` },
-        { status: error.status ?? 500 },
+        { status: error.status || 500 },
       );
     }
     const message = error instanceof Error ? error.message : "不明なエラーが発生しました。";
