@@ -7,6 +7,20 @@
   `/api/generate` を叩くだけで、ブラウザにAPIキーが露出することはありません。
 - Next.js (App Router) + Tailwind CSS で構築。
 
+## YouTube動画からコンテンツ作成 (`/youtube`)
+
+YouTube動画のURLを入れるだけで、以下の3ステップをまとめて行えます。
+
+1. 動画の字幕(文字起こし)を取得する (`/api/youtube-transcript`)
+2. 誤字脱字を直し、句読点・改行を入れて「冒頭/本編/最後に」に整える (`/api/youtube-clean`)
+3. 整えた文章を元に、note記事などに使えるコンテンツ本文を作成する (`/api/youtube-content`)
+
+生成後は、改善したい箇所と追加したい情報を入力して、コンテンツの一部を書き直すこともできます
+(同じ `/api/youtube-content` に `previousContent` / `targetExcerpt` / `additionalInfo` を渡す)。
+
+文字起こしは動画に設定されている字幕(自動生成でも可)を取得する仕組みのため、字幕のない動画では
+利用できません。
+
 ## セットアップ
 
 ```bash

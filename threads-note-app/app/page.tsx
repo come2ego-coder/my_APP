@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { PATTERNS } from "@/lib/patterns";
 
 export default function Home() {
@@ -57,6 +58,12 @@ export default function Home() {
         <p className="mt-3 text-sm text-plum-deep/70">
           今日のネタ・出来事から、投稿の下書きを3案つくります
         </p>
+        <Link
+          href="/youtube"
+          className="mt-4 inline-block text-xs text-plum-deep/60 underline underline-offset-2 hover:text-plum-deep"
+        >
+          YouTube動画からコンテンツ作成 →
+        </Link>
       </header>
 
       <section className="mb-6">
