@@ -243,13 +243,13 @@ export default function Home() {
           htmlFor="content"
           className="font-mincho text-lg text-plum-deep mb-3 block"
         >
-          書きたいこと
+          書きたい事(単語だけでもOK)
         </label>
         <textarea
           id="content"
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          placeholder="書きたい内容を自由に書いてください(単語だけでもOK)"
+          placeholder="自由に書いてください"
           rows={5}
           className="w-full rounded-lg border border-plum/20 bg-white p-3 text-sm text-plum-deep placeholder:text-plum-deep/40 focus:outline-none focus:ring-2 focus:ring-gold/60"
         />
