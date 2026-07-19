@@ -5,12 +5,14 @@ const DEFAULT_DAILY_LIMIT = 100;
 export async function checkDailyLimit(
   key: string,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  if (!process.env.UPSTASH_REDIS_REST_URL || !process.env.UPSTASH_REDIS_REST_TOKEN) {
+  const url = process.env.KV_REST_API_URL;
+  const token = process.env.KV_REST_API_TOKEN;
+  if (!url || !token) {
     return { ok: true };
   }
 
   const limit = Number(process.env.DAILY_GENERATION_LIMIT) || DEFAULT_DAILY_LIMIT;
-  const redis = Redis.fromEnv();
+  const redis = new Redis({ url, token });
   const today = new Date().toISOString().slice(0, 10);
   const redisKey = `${key}:${today}`;
 
