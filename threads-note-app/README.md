@@ -37,7 +37,7 @@ npm run dev
 | 変数名 | 必須 | 説明 |
 | --- | --- | --- |
 | `GEMINI_API_KEY` | ✅ | Google Gemini APIキー。サーバーサイドのみで使用され、`.gitignore` で除外される `.env*` ファイルに保存する。 |
-| `GEMINI_MODEL` | - | 生成に使うモデルID。未設定時は `gemini-2.5-flash`。 |
+| `GEMINI_MODEL` | - | 生成に使うモデルID。未設定時は `gemini-flash-latest`(Googleが管理する最新のFlashモデルへのエイリアス)。 |
 
 ## Vercelへのデプロイ
 
