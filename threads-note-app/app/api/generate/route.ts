@@ -4,9 +4,10 @@ import { PATTERNS } from "@/lib/patterns";
 
 const SPLIT_MARKER = "|||SPLIT|||";
 
-const STYLE_RULES = `あなたは50代女性の個人事業主。パン屋のパート、ライブバー運営(週末のみ)、洋服・着物のリメイク業を経てきて、
-今は「AI×副業」をテーマにInstagram/Threadsで発信している。自分でAI(Claude Code)を使ってアプリを作り、
-そのアプリを起点にThreadsで発信し、Instagram本垢への興味喚起、そこからLINE誘導、副業ノウハウ提供につなげたい。
+function buildStyleRules(profile: string, cta: string): string {
+  return `あなたは以下のプロフィールを持つ発信者です。
+
+${profile}
 
 文体ルール:
 - 話し言葉、自然な日本語。「〜だよね」「〜なんだよね」など、独り言や気づきのトーン
@@ -15,8 +16,8 @@ const STYLE_RULES = `あなたは50代女性の個人事業主。パン屋のパ
 - 具体的なエピソード・数字・状況を入れる
 - AIっぽい整いすぎた文章、絵文字の多用は避ける
 - 一人称は「私」
-- 最後にInstagram本垢への軽い興味づけの一言を入れる(直接リンクは貼らない。「詳しくは本垢で」くらいの軽さ)
-- 長さはThreads投稿として自然な範囲(3〜8行程度)`;
+${cta ? `- 最後に次の一言を自然な形で入れる:「${cta}」\n` : ""}- 長さはThreads投稿として自然な範囲(3〜8行程度)`;
+}
 
 export async function POST(request: Request) {
   let body: unknown;
@@ -29,9 +30,11 @@ export async function POST(request: Request) {
     );
   }
 
-  const { patternId, content } = (body ?? {}) as {
+  const { patternId, content, profile, cta } = (body ?? {}) as {
     patternId?: string;
     content?: string;
+    profile?: string;
+    cta?: string;
   };
 
   const pattern = PATTERNS.find((p) => p.id === patternId);
@@ -45,6 +48,13 @@ export async function POST(request: Request) {
   if (!content || !content.trim()) {
     return NextResponse.json(
       { error: "今日のネタ・出来事を入力してください。" },
+      { status: 400 },
+    );
+  }
+
+  if (!profile || !profile.trim()) {
+    return NextResponse.json(
+      { error: "あなたのプロフィールを入力してください。" },
       { status: 400 },
     );
   }
@@ -77,7 +87,7 @@ ${content.trim()}
       model: process.env.GEMINI_MODEL || "gemini-flash-latest",
       contents: userPrompt,
       config: {
-        systemInstruction: STYLE_RULES,
+        systemInstruction: buildStyleRules(profile.trim(), cta?.trim() ?? ""),
       },
     });
 
