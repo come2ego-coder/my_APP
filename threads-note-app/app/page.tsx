@@ -235,9 +235,6 @@ export default function Home() {
 
         <div className="mt-3 rounded-lg border border-gold/30 bg-white/60 p-4">
           <p className="text-sm text-plum-deep/90">{selectedPattern.description}</p>
-          <p className="mt-2 text-xs text-plum-deep/60">
-            例:「{selectedPattern.example}」
-          </p>
         </div>
       </section>
 
@@ -246,13 +243,13 @@ export default function Home() {
           htmlFor="content"
           className="font-mincho text-lg text-plum-deep mb-3 block"
         >
-          今日のネタ・出来事
+          書きたいこと
         </label>
         <textarea
           id="content"
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          placeholder="今日あったこと、AIでやったこと、感じたことなど自由に書いてください"
+          placeholder="書きたい内容を自由に書いてください(単語だけでもOK)"
           rows={5}
           className="w-full rounded-lg border border-plum/20 bg-white p-3 text-sm text-plum-deep placeholder:text-plum-deep/40 focus:outline-none focus:ring-2 focus:ring-gold/60"
         />
