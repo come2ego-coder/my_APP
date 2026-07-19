@@ -45,7 +45,7 @@ npm run dev
 | `GEMINI_API_KEY` | ✅ | Google Gemini APIキー。サーバーサイドのみで使用され、`.gitignore` で除外される `.env*` ファイルに保存する。 |
 | `GEMINI_MODEL` | - | 生成に使うモデルID。未設定時は `gemini-flash-latest`(Googleが管理する最新のFlashモデルへのエイリアス)。 |
 | `APP_ACCESS_PASSWORD` | ✅ | アプリ全体のログインに使う共通パスワード。未設定だと誰もログインできない。 |
-| `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` | - | Upstash Redis連携時にVercelが自動設定。1日の利用回数カウントに使う。 |
+| `KV_REST_API_URL` / `KV_REST_API_TOKEN` | - | Upstash Redis連携時にVercelが自動設定。1日の利用回数カウントに使う。 |
 | `DAILY_GENERATION_LIMIT` | - | `/api/generate` の1日あたりの上限回数。未設定時は100。Upstash未連携時は無効。 |
 
 ## Vercelへのデプロイ
