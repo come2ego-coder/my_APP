@@ -2,6 +2,7 @@ import { GoogleGenAI, ApiError } from "@google/genai";
 import { NextResponse } from "next/server";
 import { PATTERNS } from "@/lib/patterns";
 import { TONE_OPTIONS } from "@/lib/tone";
+import { checkDailyLimit } from "@/lib/dailyLimit";
 
 const SPLIT_MARKER = "|||SPLIT|||";
 
@@ -94,6 +95,11 @@ ${content.trim()}
 見出しや番号、前置き・後書きの説明文は一切つけないでください。`;
 
   const tone = TONE_OPTIONS.find((t) => t.id === toneId) ?? TONE_OPTIONS[0];
+
+  const limitResult = await checkDailyLimit("generate-count");
+  if (!limitResult.ok) {
+    return NextResponse.json({ error: limitResult.error }, { status: 429 });
+  }
 
   try {
     const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
