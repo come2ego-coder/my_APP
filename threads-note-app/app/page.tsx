@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { PATTERNS } from "@/lib/patterns";
 import { CTA_OPTIONS } from "@/lib/cta";
 import { TONE_OPTIONS } from "@/lib/tone";
@@ -23,6 +24,7 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<string[]>([]);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+  const router = useRouter();
 
   const selectedPattern = PATTERNS.find((p) => p.id === selectedId)!;
   const isCustomCta = ctaOptionId === "custom";
@@ -81,6 +83,10 @@ export default function Home() {
           toneId,
         }),
       });
+      if (res.status === 401) {
+        router.push("/login?next=/");
+        return;
+      }
       const data = await res.json();
       if (!res.ok) {
         setError(data.error || `エラーが発生しました(status: ${res.status})`);
