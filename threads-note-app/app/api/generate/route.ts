@@ -5,13 +5,21 @@ import { TONE_OPTIONS } from "@/lib/tone";
 
 const SPLIT_MARKER = "|||SPLIT|||";
 
-function buildStyleRules(profile: string, toneInstruction: string, cta: string): string {
+function buildStyleRules(
+  profile: string,
+  toneInstruction: string,
+  target: string,
+  cta: string,
+): string {
   return `あなたは以下のプロフィールを持つ発信者です。
 
 ${profile}
 
 文体・口調:
 ${toneInstruction}
+
+想定する読者(ターゲット):
+${target || "特に指定なし。幅広い読者に向けて書く。"}
 
 その他のルール:
 - 難しい専門用語は使わない。カタカナ英語もできるだけ避ける
@@ -32,10 +40,11 @@ export async function POST(request: Request) {
     );
   }
 
-  const { patternId, content, profile, cta, toneId } = (body ?? {}) as {
+  const { patternId, content, profile, target, cta, toneId } = (body ?? {}) as {
     patternId?: string;
     content?: string;
     profile?: string;
+    target?: string;
     cta?: string;
     toneId?: string;
   };
@@ -92,7 +101,12 @@ ${content.trim()}
       model: process.env.GEMINI_MODEL || "gemini-flash-latest",
       contents: userPrompt,
       config: {
-        systemInstruction: buildStyleRules(profile.trim(), tone.instruction, cta?.trim() ?? ""),
+        systemInstruction: buildStyleRules(
+          profile.trim(),
+          tone.instruction,
+          target?.trim() ?? "",
+          cta?.trim() ?? "",
+        ),
       },
     });
 
