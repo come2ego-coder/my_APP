@@ -1,18 +1,20 @@
 import { GoogleGenAI, ApiError } from "@google/genai";
 import { NextResponse } from "next/server";
 import { PATTERNS } from "@/lib/patterns";
+import { TONE_OPTIONS } from "@/lib/tone";
 
 const SPLIT_MARKER = "|||SPLIT|||";
 
-function buildStyleRules(profile: string, cta: string): string {
+function buildStyleRules(profile: string, toneInstruction: string, cta: string): string {
   return `あなたは以下のプロフィールを持つ発信者です。
 
 ${profile}
 
-文体ルール:
-- 話し言葉、自然な日本語。「〜だよね」「〜なんだよね」など、独り言や気づきのトーン
+文体・口調:
+${toneInstruction}
+
+その他のルール:
 - 難しい専門用語は使わない。カタカナ英語もできるだけ避ける
-- 上から目線・説教くさい言い方はNG。あくまで自分の体験として話す
 - 具体的なエピソード・数字・状況を入れる
 - AIっぽい整いすぎた文章、絵文字の多用は避ける
 - 一人称は「私」
@@ -30,11 +32,12 @@ export async function POST(request: Request) {
     );
   }
 
-  const { patternId, content, profile, cta } = (body ?? {}) as {
+  const { patternId, content, profile, cta, toneId } = (body ?? {}) as {
     patternId?: string;
     content?: string;
     profile?: string;
     cta?: string;
+    toneId?: string;
   };
 
   const pattern = PATTERNS.find((p) => p.id === patternId);
@@ -81,13 +84,15 @@ ${content.trim()}
 出力は3案の本文だけを、区切り文字列 "${SPLIT_MARKER}" で区切って返してください。
 見出しや番号、前置き・後書きの説明文は一切つけないでください。`;
 
+  const tone = TONE_OPTIONS.find((t) => t.id === toneId) ?? TONE_OPTIONS[0];
+
   try {
     const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
     const response = await ai.models.generateContent({
       model: process.env.GEMINI_MODEL || "gemini-flash-latest",
       contents: userPrompt,
       config: {
-        systemInstruction: buildStyleRules(profile.trim(), cta?.trim() ?? ""),
+        systemInstruction: buildStyleRules(profile.trim(), tone.instruction, cta?.trim() ?? ""),
       },
     });
 

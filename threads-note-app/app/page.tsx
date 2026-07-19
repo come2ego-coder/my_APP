@@ -3,16 +3,19 @@
 import { useEffect, useState } from "react";
 import { PATTERNS } from "@/lib/patterns";
 import { CTA_OPTIONS } from "@/lib/cta";
+import { TONE_OPTIONS } from "@/lib/tone";
 
 const PROFILE_STORAGE_KEY = "threads-note-app:profile";
 const CTA_OPTION_STORAGE_KEY = "threads-note-app:ctaOption";
 const CUSTOM_CTA_STORAGE_KEY = "threads-note-app:customCta";
+const TONE_STORAGE_KEY = "threads-note-app:tone";
 
 export default function Home() {
   const [selectedId, setSelectedId] = useState(PATTERNS[0].id);
   const [profile, setProfile] = useState("");
   const [ctaOptionId, setCtaOptionId] = useState(CTA_OPTIONS[0].id);
   const [customCta, setCustomCta] = useState("");
+  const [toneId, setToneId] = useState(TONE_OPTIONS[0].id);
   const [content, setContent] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -30,6 +33,7 @@ export default function Home() {
     setProfile(localStorage.getItem(PROFILE_STORAGE_KEY) ?? "");
     setCtaOptionId(localStorage.getItem(CTA_OPTION_STORAGE_KEY) ?? CTA_OPTIONS[0].id);
     setCustomCta(localStorage.getItem(CUSTOM_CTA_STORAGE_KEY) ?? "");
+    setToneId(localStorage.getItem(TONE_STORAGE_KEY) ?? TONE_OPTIONS[0].id);
   }, []);
 
   function handleProfileChange(value: string) {
@@ -47,6 +51,11 @@ export default function Home() {
     localStorage.setItem(CUSTOM_CTA_STORAGE_KEY, value);
   }
 
+  function handleToneChange(id: string) {
+    setToneId(id);
+    localStorage.setItem(TONE_STORAGE_KEY, id);
+  }
+
   async function handleGenerate() {
     setLoading(true);
     setError(null);
@@ -55,7 +64,13 @@ export default function Home() {
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ patternId: selectedId, content, profile, cta: effectiveCta }),
+        body: JSON.stringify({
+          patternId: selectedId,
+          content,
+          profile,
+          cta: effectiveCta,
+          toneId,
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -143,6 +158,31 @@ export default function Home() {
             className="mt-3 w-full rounded-lg border border-plum/20 bg-white p-3 text-sm text-plum-deep placeholder:text-plum-deep/40 focus:outline-none focus:ring-2 focus:ring-gold/60"
           />
         )}
+      </section>
+
+      <section className="mb-6">
+        <h2 className="font-mincho text-lg text-plum-deep mb-3">
+          文章の口調を選ぶ
+        </h2>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          {TONE_OPTIONS.map((tone) => {
+            const isSelected = tone.id === toneId;
+            return (
+              <button
+                key={tone.id}
+                type="button"
+                onClick={() => handleToneChange(tone.id)}
+                className={`rounded-lg px-3 py-2.5 text-sm font-medium transition-colors border ${
+                  isSelected
+                    ? "bg-plum text-gold-light border-plum shadow-sm"
+                    : "bg-white text-plum-deep border-plum/20 hover:border-gold/60"
+                }`}
+              >
+                {tone.label}
+              </button>
+            );
+          })}
+        </div>
       </section>
 
       <section className="mb-6">
