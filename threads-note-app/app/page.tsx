@@ -1,11 +1,18 @@
 "use client";
 
-import { useState } from "react";
-import Link from "next/link";
+import { useEffect, useState } from "react";
 import { PATTERNS } from "@/lib/patterns";
+import { CTA_OPTIONS } from "@/lib/cta";
+
+const PROFILE_STORAGE_KEY = "threads-note-app:profile";
+const CTA_OPTION_STORAGE_KEY = "threads-note-app:ctaOption";
+const CUSTOM_CTA_STORAGE_KEY = "threads-note-app:customCta";
 
 export default function Home() {
   const [selectedId, setSelectedId] = useState(PATTERNS[0].id);
+  const [profile, setProfile] = useState("");
+  const [ctaOptionId, setCtaOptionId] = useState(CTA_OPTIONS[0].id);
+  const [customCta, setCustomCta] = useState("");
   const [content, setContent] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -13,6 +20,32 @@ export default function Home() {
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
 
   const selectedPattern = PATTERNS.find((p) => p.id === selectedId)!;
+  const isCustomCta = ctaOptionId === "custom";
+  const effectiveCta = isCustomCta
+    ? customCta.trim()
+    : CTA_OPTIONS.find((o) => o.id === ctaOptionId)?.text ?? "";
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- hydrate from localStorage after mount
+    setProfile(localStorage.getItem(PROFILE_STORAGE_KEY) ?? "");
+    setCtaOptionId(localStorage.getItem(CTA_OPTION_STORAGE_KEY) ?? CTA_OPTIONS[0].id);
+    setCustomCta(localStorage.getItem(CUSTOM_CTA_STORAGE_KEY) ?? "");
+  }, []);
+
+  function handleProfileChange(value: string) {
+    setProfile(value);
+    localStorage.setItem(PROFILE_STORAGE_KEY, value);
+  }
+
+  function handleCtaOptionChange(id: string) {
+    setCtaOptionId(id);
+    localStorage.setItem(CTA_OPTION_STORAGE_KEY, id);
+  }
+
+  function handleCustomCtaChange(value: string) {
+    setCustomCta(value);
+    localStorage.setItem(CUSTOM_CTA_STORAGE_KEY, value);
+  }
 
   async function handleGenerate() {
     setLoading(true);
@@ -22,7 +55,7 @@ export default function Home() {
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ patternId: selectedId, content }),
+        body: JSON.stringify({ patternId: selectedId, content, profile, cta: effectiveCta }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -58,13 +91,59 @@ export default function Home() {
         <p className="mt-3 text-sm text-plum-deep/70">
           今日のネタ・出来事から、投稿の下書きを3案つくります
         </p>
-        <Link
-          href="/youtube"
-          className="mt-4 inline-block text-xs text-plum-deep/60 underline underline-offset-2 hover:text-plum-deep"
-        >
-          YouTube動画からコンテンツ作成 →
-        </Link>
       </header>
+
+      <section className="mb-6">
+        <label
+          htmlFor="profile"
+          className="font-mincho text-lg text-plum-deep mb-3 block"
+        >
+          あなたのプロフィール
+        </label>
+        <textarea
+          id="profile"
+          value={profile}
+          onChange={(e) => handleProfileChange(e.target.value)}
+          placeholder="どんな人か、どんな経歴・立場で発信しているかを書いてください(例: 50代女性、パン屋のパート、着物リメイクをやってきて、今はAI×副業をテーマに発信中)"
+          rows={3}
+          className="w-full rounded-lg border border-plum/20 bg-white p-3 text-sm text-plum-deep placeholder:text-plum-deep/40 focus:outline-none focus:ring-2 focus:ring-gold/60"
+        />
+        <p className="mt-2 text-xs text-plum-deep/60">
+          この内容に基づいて、あなたらしい語り口の下書きを作ります。ブラウザに保存されるので、次回からは入力不要です。
+        </p>
+
+        <p className="font-mincho text-base text-plum-deep mt-4 mb-2">
+          最後に添える一言(任意)
+        </p>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+          {CTA_OPTIONS.map((option) => {
+            const isSelected = option.id === ctaOptionId;
+            return (
+              <button
+                key={option.id}
+                type="button"
+                onClick={() => handleCtaOptionChange(option.id)}
+                className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors border ${
+                  isSelected
+                    ? "bg-plum text-gold-light border-plum shadow-sm"
+                    : "bg-white text-plum-deep border-plum/20 hover:border-gold/60"
+                }`}
+              >
+                {option.label}
+              </button>
+            );
+          })}
+        </div>
+        {isCustomCta && (
+          <input
+            type="text"
+            value={customCta}
+            onChange={(e) => handleCustomCtaChange(e.target.value)}
+            placeholder="入れたい一言を書いてください"
+            className="mt-3 w-full rounded-lg border border-plum/20 bg-white p-3 text-sm text-plum-deep placeholder:text-plum-deep/40 focus:outline-none focus:ring-2 focus:ring-gold/60"
+          />
+        )}
+      </section>
 
       <section className="mb-6">
         <h2 className="font-mincho text-lg text-plum-deep mb-3">
@@ -118,7 +197,7 @@ export default function Home() {
       <button
         type="button"
         onClick={handleGenerate}
-        disabled={loading || !content.trim()}
+        disabled={loading || !content.trim() || !profile.trim()}
         className="w-full rounded-lg bg-plum text-gold-light font-medium py-3 shadow-md transition-opacity hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed"
       >
         {loading ? "つくっています..." : "3案つくる"}
