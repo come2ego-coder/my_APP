@@ -1,0 +1,39 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f2f6fb;
+  --foreground: #2b3440;
+  --card: #ffffff;
+  --accent: #3b6fd6;
+  --accent-deep: #29509e;
+  --muted: #74808f;
+  --income: #3f8f6a;
+  --loss: #c25c5c;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-accent: var(--accent);
+  --color-accent-deep: var(--accent-deep);
+  --color-muted: var(--muted);
+  --color-income: var(--income);
+  --color-loss: var(--loss);
+  --font-sans: var(--font-sans);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), "Hiragino Kaku Gothic ProN", sans-serif;
+}
+
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+}
