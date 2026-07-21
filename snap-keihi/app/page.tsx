@@ -100,6 +100,7 @@ export default function Home() {
   const [quickRevenueAmount, setQuickRevenueAmount] = useState("");
   const [showCalculator, setShowCalculator] = useState(false);
   const [calcExpr, setCalcExpr] = useState("");
+  const [expandedDay, setExpandedDay] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -669,11 +670,43 @@ export default function Home() {
             📝 記録をタップすると、修正や削除ができます
           </p>
         )}
-        {groupedByDate.map((group) => (
+        {groupedByDate.map((group) => {
+          const dayTotals = totalsFor(group.items);
+          const isExpanded = expandedDay === group.date;
+          return (
           <div key={group.date}>
-            <p className="text-xs text-muted mb-1.5 px-1">
-              {group.date.slice(5).replace("-", "/")}
-            </p>
+            <button
+              type="button"
+              onClick={() => setExpandedDay(isExpanded ? null : group.date)}
+              className="flex items-center gap-1 text-xs text-muted mb-1.5 px-1"
+            >
+              <span>{group.date.slice(5).replace("-", "/")}</span>
+              <span className="text-[10px]">{isExpanded ? "▲" : "▼"}</span>
+            </button>
+            {isExpanded && (
+              <div className="bg-card rounded-2xl shadow-sm p-4 mb-1.5 flex justify-center gap-6 text-center">
+                <div>
+                  <p className="text-xs text-muted">売上</p>
+                  <p className="text-sm font-semibold text-income tabular-nums">{formatYen(dayTotals.revenue)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted">仕入</p>
+                  <p className="text-sm font-semibold tabular-nums">{formatYen(dayTotals.purchase)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted">経費</p>
+                  <p className="text-sm font-semibold tabular-nums">{formatYen(dayTotals.expense)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted">利益</p>
+                  <p
+                    className={`text-sm font-semibold tabular-nums ${dayTotals.profit >= 0 ? "text-income" : "text-loss"}`}
+                  >
+                    {formatSigned(dayTotals.profit)}
+                  </p>
+                </div>
+              </div>
+            )}
             <div className="bg-card rounded-2xl shadow-sm divide-y divide-black/5 overflow-hidden">
               {group.items.map((r) => {
                 const kindMeta = ENTRY_KINDS.find((k) => k.id === r.kind)!;
@@ -717,7 +750,8 @@ export default function Home() {
               })}
             </div>
           </div>
-        ))}
+          );
+        })}
       </section>
 
       <input
