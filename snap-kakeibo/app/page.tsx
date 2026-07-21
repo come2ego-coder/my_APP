@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   CATEGORIES,
@@ -82,6 +83,7 @@ export default function Home() {
   const [analyzeNotice, setAnalyzeNotice] = useState<string | null>(null);
   const [showTemplateManager, setShowTemplateManager] = useState(false);
   const [templateDraft, setTemplateDraft] = useState<TemplateDraft>(emptyTemplateDraft());
+  const [authUser, setAuthUser] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -92,12 +94,51 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    if (hydrated) saveRecords(records);
-  }, [records, hydrated]);
+    let cancelled = false;
+    (async () => {
+      try {
+        const meRes = await fetch("/api/auth/me");
+        const me = await meRes.json();
+        if (cancelled || !me.username) return;
+        setAuthUser(me.username);
+        const dataRes = await fetch("/api/data");
+        if (!cancelled && dataRes.ok) {
+          const data = await dataRes.json();
+          setRecords(data.records ?? []);
+          setTemplates(data.templates ?? []);
+        }
+      } catch {
+        // no server session available; stay in local-only mode
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
-    if (hydrated) saveTemplates(templates);
-  }, [templates, hydrated]);
+    if (!hydrated) return;
+    saveRecords(records);
+    saveTemplates(templates);
+    if (!authUser) return;
+    const timer = setTimeout(() => {
+      fetch("/api/data", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ records, templates }),
+      }).catch(() => {});
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [records, templates, hydrated, authUser]);
+
+  async function handleLogout() {
+    setAuthUser(null);
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } catch {
+      // best-effort; the cookie is short-lived anyway
+    }
+  }
 
   const currentMonth = todayStr().slice(0, 7);
 
@@ -351,6 +392,24 @@ export default function Home() {
         <h1 className="text-2xl font-bold text-accent-deep tracking-wide">📷 パシャ家計簿</h1>
         <p className="mt-1 text-sm text-muted">レシートを撮るだけ。入力はほぼなし。</p>
       </header>
+
+      <div className="flex items-center justify-center gap-2 mb-4 text-xs text-muted">
+        {authUser ? (
+          <>
+            <span>👤 {authUser} としてログイン中</span>
+            <button type="button" onClick={handleLogout} className="text-accent-deep underline">
+              ログアウト
+            </button>
+          </>
+        ) : (
+          <>
+            <span>未ログイン(この端末だけに保存中)</span>
+            <Link href="/login" className="text-accent-deep underline">
+              アカウントを作る
+            </Link>
+          </>
+        )}
+      </div>
 
       <div className="flex items-center justify-center gap-4 mb-4">
         <button
