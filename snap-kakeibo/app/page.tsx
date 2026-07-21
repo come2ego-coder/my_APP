@@ -466,7 +466,9 @@ export default function Home() {
           <div className="text-center py-16 text-muted">
             <p className="text-4xl mb-3">🧾</p>
             <p className="text-sm">まだ記録がありません。</p>
-            <p className="text-sm">右下のボタンでレシートを撮ってみましょう!</p>
+            <p className="text-sm">
+              右下のボタンでレシートを撮る(PayPayなどの支払い完了画面のスクリーンショットでもOK)!
+            </p>
           </div>
         )}
         {groupedByDate.length > 0 && (
@@ -528,7 +530,6 @@ export default function Home() {
         ref={fileInputRef}
         type="file"
         accept="image/*"
-        capture="environment"
         className="hidden"
         onChange={handleFileChange}
       />
@@ -546,7 +547,7 @@ export default function Home() {
             type="button"
             onClick={handlePhotoClick}
             className="w-16 h-16 rounded-full bg-accent text-white text-2xl shadow-lg flex items-center justify-center active:scale-95 transition-transform"
-            aria-label="レシートを撮る"
+            aria-label="レシートを撮る・写真を選ぶ"
           >
             📷
           </button>
