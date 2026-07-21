@@ -29,6 +29,7 @@ type Draft = {
   kind: EntryKind;
   templateId?: string;
   kindLocked?: boolean;
+  splits?: { category: string; amount: string }[];
 };
 
 function emptyDraft(kind: EntryKind = "expense"): Draft {
@@ -248,9 +249,21 @@ export default function Home() {
     const amount = Number(draft.amount);
     if (!Number.isFinite(amount) || amount < 0) return;
 
+    const splitRecords: KakeiboRecord[] = (draft.splits ?? []).map((s) => ({
+      id: crypto.randomUUID(),
+      date: draft.date,
+      store: draft.store.trim(),
+      amount: Number(s.amount),
+      category: s.category,
+      memo: draft.memo.trim(),
+      thumbnail: draft.thumbnail,
+      createdAt: Date.now(),
+      kind: draft.kind,
+    }));
+
     if (draft.id) {
-      setRecords((prev) =>
-        prev.map((r) =>
+      setRecords((prev) => [
+        ...prev.map((r) =>
           r.id === draft.id
             ? {
                 ...r,
@@ -263,7 +276,8 @@ export default function Home() {
               }
             : r,
         ),
-      );
+        ...splitRecords,
+      ]);
     } else {
       const newRecord: KakeiboRecord = {
         id: crypto.randomUUID(),
@@ -277,7 +291,7 @@ export default function Home() {
         kind: draft.kind,
         templateId: draft.templateId,
       };
-      setRecords((prev) => [...prev, newRecord]);
+      setRecords((prev) => [...prev, newRecord, ...splitRecords]);
       setViewMonth(monthKey(draft.date));
     }
     setDraft(null);
@@ -601,10 +615,38 @@ function EntryModal({
 }) {
   const amountValid = draft.amount !== "" && Number.isFinite(Number(draft.amount)) && Number(draft.amount) >= 0;
   const categoryOptions = categoriesForKind(draft.kind);
+  const splits = draft.splits ?? [];
+
+  const [showSplitForm, setShowSplitForm] = useState(false);
+  const [splitAmount, setSplitAmount] = useState("");
+  const [splitCategory, setSplitCategory] = useState(
+    categoryOptions.find((c) => c.id !== draft.category)?.id ?? categoryOptions[0].id,
+  );
 
   function switchKind(kind: EntryKind) {
     if (kind === draft.kind) return;
-    onChange({ ...draft, kind, category: defaultCategoryForKind(kind) });
+    onChange({ ...draft, kind, category: defaultCategoryForKind(kind), splits: [] });
+    setShowSplitForm(false);
+  }
+
+  function confirmSplit() {
+    const splitAmt = Number(splitAmount);
+    const current = Number(draft.amount) || 0;
+    if (!Number.isFinite(splitAmt) || splitAmt <= 0 || splitAmt >= current) return;
+    onChange({
+      ...draft,
+      amount: String(current - splitAmt),
+      splits: [...splits, { category: splitCategory, amount: splitAmount }],
+    });
+    setSplitAmount("");
+    setShowSplitForm(false);
+  }
+
+  function removeSplit(index: number) {
+    const removed = splits[index];
+    if (!removed) return;
+    const restored = (Number(draft.amount) || 0) + Number(removed.amount);
+    onChange({ ...draft, amount: String(restored), splits: splits.filter((_, i) => i !== index) });
   }
 
   return (
@@ -696,6 +738,84 @@ function EntryModal({
               ))}
             </div>
           </div>
+
+          {splits.length > 0 && (
+            <div className="flex flex-col gap-1.5">
+              {splits.map((s, i) => {
+                const cat = getCategoryForKind(draft.kind, s.category);
+                return (
+                  <div
+                    key={i}
+                    className="flex items-center gap-2 text-xs bg-white rounded-lg px-3 py-2 shadow-sm"
+                  >
+                    <span>{cat.emoji}</span>
+                    <span className="flex-1">{cat.label}</span>
+                    <span className="tabular-nums">{formatYen(Number(s.amount))}</span>
+                    <button
+                      type="button"
+                      onClick={() => removeSplit(i)}
+                      className="text-red-500 px-1"
+                      aria-label="この内訳を削除"
+                    >
+                      ×
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {showSplitForm ? (
+            <div className="bg-white rounded-xl p-3 shadow-sm flex flex-col gap-2">
+              <p className="text-xs text-muted">別カテゴリに分ける金額</p>
+              <div className="flex items-center gap-1">
+                <span className="text-muted">¥</span>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  value={splitAmount}
+                  onChange={(e) => setSplitAmount(e.target.value)}
+                  placeholder="0"
+                  className="flex-1 text-sm font-semibold outline-none min-w-0"
+                />
+              </div>
+              <select
+                value={splitCategory}
+                onChange={(e) => setSplitCategory(e.target.value)}
+                className="text-sm rounded-lg border border-black/10 px-2 py-1.5 bg-white"
+              >
+                {categoryOptions.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.emoji} {c.label}
+                  </option>
+                ))}
+              </select>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowSplitForm(false)}
+                  className="flex-1 py-2 text-xs rounded-lg bg-black/5"
+                >
+                  キャンセル
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmSplit}
+                  className="flex-1 py-2 text-xs rounded-lg bg-accent-deep text-white font-semibold"
+                >
+                  分ける
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setShowSplitForm(true)}
+              className="text-xs text-accent-deep underline self-start"
+            >
+              ✂️ 別のカテゴリに分ける
+            </button>
+          )}
 
           <div className="grid grid-cols-2 gap-3">
             <div>
