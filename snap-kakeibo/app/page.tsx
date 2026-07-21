@@ -31,22 +31,6 @@ type Draft = {
   templateId?: string;
   kindLocked?: boolean;
   splits?: { category: string; amount: string }[];
-  pendingId?: string;
-};
-
-type AnalyzeResult = {
-  store?: string;
-  date?: string | null;
-  breakdown?: { category?: string; amount?: number }[];
-  memo?: string;
-};
-
-type PendingPhoto = {
-  id: string;
-  thumbnail: string;
-  status: "analyzing" | "ready" | "error";
-  result?: AnalyzeResult;
-  error?: string;
 };
 
 function emptyDraft(kind: EntryKind = "expense"): Draft {
@@ -95,8 +79,8 @@ export default function Home() {
   const [hydrated, setHydrated] = useState(false);
   const [viewMonth, setViewMonth] = useState(() => todayStr().slice(0, 7));
   const [draft, setDraft] = useState<Draft | null>(null);
+  const [analyzing, setAnalyzing] = useState(false);
   const [analyzeNotice, setAnalyzeNotice] = useState<string | null>(null);
-  const [pending, setPending] = useState<PendingPhoto[]>([]);
   const [showTemplateManager, setShowTemplateManager] = useState(false);
   const [templateDraft, setTemplateDraft] = useState<TemplateDraft>(emptyTemplateDraft());
   const [authUser, setAuthUser] = useState<string | null>(null);
@@ -267,108 +251,78 @@ export default function Home() {
     e.target.value = "";
     if (!file) return;
 
-    const id = crypto.randomUUID();
+    setAnalyzeNotice(null);
     try {
       const [analysisImage, thumbnail] = await Promise.all([
         resizeImage(file, 1024, 0.7),
         resizeImage(file, 720, 0.62),
       ]);
 
-      // Queue it and return immediately so the camera button is free again
-      // right away; the AI call below runs in the background, and several
-      // photos can be in flight at once without blocking new shots.
-      setPending((prev) => [...prev, { id, thumbnail, status: "analyzing" }]);
+      setDraft({ ...emptyDraft("expense"), thumbnail, kindLocked: true });
+      setAnalyzing(true);
 
       const { mimeType, data } = dataUrlToBase64(analysisImage);
-      // A hung request must never leave a tile spinning forever, so give up
-      // and surface an error after 45s regardless of what the server does.
+      // A hung request must never leave the modal spinning forever, so give
+      // up and surface an error after 45s regardless of what the server does.
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 45000);
-
-      fetch("/api/analyze-receipt", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ image: data, mimeType }),
-        signal: controller.signal,
-      })
-        .then(async (res) => {
-          const result = await res.json();
-          if (!res.ok) {
-            setPending((prev) =>
-              prev.map((p) =>
-                p.id === id
-                  ? { ...p, status: "error", error: result.error || "読み取りに失敗しました。" }
-                  : p,
-              ),
-            );
-            return;
-          }
-          setPending((prev) =>
-            prev.map((p) => (p.id === id ? { ...p, status: "ready", result } : p)),
-          );
-        })
-        .catch((err) => {
-          const isTimeout = err instanceof Error && err.name === "AbortError";
-          setPending((prev) =>
-            prev.map((p) =>
-              p.id === id
-                ? {
-                    ...p,
-                    status: "error",
-                    error: isTimeout
-                      ? "読み取りに時間がかかりすぎました。もう一度お試しください。"
-                      : "画像の処理に失敗しました。",
-                  }
-                : p,
-            ),
-          );
-        })
-        .finally(() => {
-          clearTimeout(timeout);
+      let res: Response;
+      try {
+        res = await fetch("/api/analyze-receipt", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ image: data, mimeType }),
+          signal: controller.signal,
         });
-    } catch {
-      // Resizing the photo itself failed; nothing was queued.
-    }
-  }
+      } finally {
+        clearTimeout(timeout);
+      }
+      const result = await res.json();
 
-  function openPendingReview(p: PendingPhoto) {
-    if (p.status === "analyzing") return;
+      if (!res.ok) {
+        setAnalyzeNotice(result.error || "読み取りに失敗しました。手入力で保存できます。");
+        return;
+      }
 
-    const breakdown = Array.isArray(p.result?.breakdown) ? p.result.breakdown : [];
-    const [first, ...rest] = breakdown;
+      const breakdown: { category?: string; amount?: number }[] = Array.isArray(result.breakdown)
+        ? result.breakdown
+        : [];
+      const [first, ...rest] = breakdown;
 
-    setDraft({
-      id: null,
-      date: p.result?.date || todayStr(),
-      store: p.result?.store || "",
-      amount: first?.amount != null ? String(first.amount) : "",
-      category: first?.category || defaultCategoryForKind("expense"),
-      memo: p.result?.memo || "",
-      thumbnail: p.thumbnail,
-      kind: "expense",
-      kindLocked: true,
-      splits: rest.map((r) => ({
-        category: r.category || defaultCategoryForKind("expense"),
-        amount: String(r.amount ?? 0),
-      })),
-      pendingId: p.id,
-    });
-
-    if (p.status === "error") {
-      setAnalyzeNotice(p.error || "読み取りに失敗しました。手入力で保存できます。");
-    } else if (!first) {
-      setAnalyzeNotice("金額を読み取れませんでした。手入力してください。");
-    } else if (rest.length > 0) {
-      setAnalyzeNotice(
-        `カテゴリが混在していたため、${breakdown.length}件に自動で分けました。内容を確認してください。`,
+      setDraft((cur) =>
+        cur
+          ? {
+              ...cur,
+              store: result.store || "",
+              date: result.date || cur.date,
+              amount: first?.amount != null ? String(first.amount) : "",
+              category: first?.category || defaultCategoryForKind("expense"),
+              memo: result.memo || "",
+              splits: rest.map((r) => ({
+                category: r.category || defaultCategoryForKind("expense"),
+                amount: String(r.amount ?? 0),
+              })),
+            }
+          : cur,
       );
-    } else {
-      setAnalyzeNotice(null);
-    }
-  }
 
-  function discardPending(id: string) {
-    setPending((prev) => prev.filter((p) => p.id !== id));
+      if (!first) {
+        setAnalyzeNotice("金額を読み取れませんでした。手入力してください。");
+      } else if (rest.length > 0) {
+        setAnalyzeNotice(
+          `カテゴリが混在していたため、${breakdown.length}件に自動で分けました。内容を確認してください。`,
+        );
+      }
+    } catch (err) {
+      const isTimeout = err instanceof Error && err.name === "AbortError";
+      setAnalyzeNotice(
+        isTimeout
+          ? "読み取りに時間がかかりすぎました。もう一度お試しください。"
+          : "画像の処理に失敗しました。手入力で保存できます。",
+      );
+    } finally {
+      setAnalyzing(false);
+    }
   }
 
   function handleSave() {
@@ -420,9 +374,6 @@ export default function Home() {
       };
       setRecords((prev) => [...prev, newRecord, ...splitRecords]);
       setViewMonth(monthKey(draft.date));
-    }
-    if (draft.pendingId) {
-      setPending((prev) => prev.filter((p) => p.id !== draft.pendingId));
     }
     setDraft(null);
   }
@@ -623,51 +574,6 @@ export default function Home() {
         )}
       </section>
 
-      {pending.length > 0 && (
-        <section className="mb-4">
-          <p className="text-xs text-muted mb-2 px-1">📥 確認待ち({pending.length}件)</p>
-          <div className="flex gap-2 overflow-x-auto pb-1">
-            {pending.map((p) => (
-              <div key={p.id} className="relative shrink-0 w-16 h-16">
-                <button
-                  type="button"
-                  onClick={() => openPendingReview(p)}
-                  disabled={p.status === "analyzing"}
-                  className="block w-full h-full rounded-xl overflow-hidden shadow-sm"
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={p.thumbnail} alt="" className="w-full h-full object-cover" />
-                  {p.status === "analyzing" && (
-                    <span className="absolute inset-0 bg-black/40 flex items-center justify-center text-xl animate-spin">
-                      🔄
-                    </span>
-                  )}
-                  {p.status === "error" && (
-                    <span className="absolute bottom-0 inset-x-0 bg-red-500/90 text-white text-[10px] text-center py-0.5">
-                      要確認
-                    </span>
-                  )}
-                  {p.status === "ready" && (
-                    <span className="absolute bottom-0 inset-x-0 bg-accent/90 text-white text-[10px] text-center py-0.5">
-                      確認する
-                    </span>
-                  )}
-                </button>
-                {p.status !== "analyzing" && (
-                  <button
-                    type="button"
-                    onClick={() => discardPending(p.id)}
-                    aria-label="この写真を取り消す"
-                    className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-black/60 text-white text-xs leading-4"
-                  >
-                    ×
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
 
       <section className="flex flex-col gap-4">
         {groupedByDate.length === 0 && hydrated && (
@@ -765,6 +671,7 @@ export default function Home() {
       {draft && (
         <EntryModal
           draft={draft}
+          analyzing={analyzing}
           analyzeNotice={analyzeNotice}
           onChange={setDraft}
           onSave={handleSave}
@@ -791,6 +698,7 @@ export default function Home() {
 
 function EntryModal({
   draft,
+  analyzing,
   analyzeNotice,
   onChange,
   onSave,
@@ -798,6 +706,7 @@ function EntryModal({
   onClose,
 }: {
   draft: Draft;
+  analyzing: boolean;
   analyzeNotice: string | null;
   onChange: (d: Draft) => void;
   onSave: () => void;
@@ -894,7 +803,10 @@ function EntryModal({
           </div>
         )}
 
-        {analyzeNotice && (
+        {analyzing && (
+          <p className="text-center text-sm text-muted mb-3">🔍 レシートを読み取り中...</p>
+        )}
+        {analyzeNotice && !analyzing && (
           <p className="text-center text-xs text-accent-deep bg-accent/10 rounded-lg py-2 px-3 mb-3">
             {analyzeNotice}
           </p>
