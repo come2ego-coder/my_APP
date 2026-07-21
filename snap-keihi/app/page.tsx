@@ -16,6 +16,7 @@ import {
   recordsToCsv,
   type AnnualSummary,
 } from "@/lib/csv";
+import { evaluateExpression, pressKey } from "@/lib/calculator";
 import { dataUrlToBase64, resizeImage } from "@/lib/image";
 import {
   type Record as KeihiRecord,
@@ -97,6 +98,8 @@ export default function Home() {
   const [templateDraft, setTemplateDraft] = useState<TemplateDraft>(emptyTemplateDraft());
   const [quickRevenueDate, setQuickRevenueDate] = useState(() => todayStr());
   const [quickRevenueAmount, setQuickRevenueAmount] = useState("");
+  const [showCalculator, setShowCalculator] = useState(false);
+  const [calcExpr, setCalcExpr] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -416,6 +419,14 @@ export default function Home() {
     setQuickRevenueAmount("");
   }
 
+  function applyCalculator() {
+    const result = evaluateExpression(calcExpr);
+    if (result != null && result >= 0) {
+      setQuickRevenueAmount(String(Math.round(result * 100) / 100));
+    }
+    setShowCalculator(false);
+  }
+
   const diff = monthTotals.profit - prevMonthStats.profit;
 
   return (
@@ -472,6 +483,17 @@ export default function Home() {
                 placeholder="0"
                 className="flex-1 font-bold outline-none min-w-0"
               />
+              <button
+                type="button"
+                onClick={() => {
+                  setCalcExpr(quickRevenueAmount);
+                  setShowCalculator(true);
+                }}
+                aria-label="電卓を開く"
+                className="text-lg leading-none px-1 shrink-0"
+              >
+                🧮
+              </button>
             </div>
           </div>
         </div>
@@ -734,6 +756,15 @@ export default function Home() {
           onExportSummary={handleExportAnnualSummaryCsv}
           onExportTransactions={handleExportAnnualTransactionsCsv}
           onClose={() => setShowAnnualReport(false)}
+        />
+      )}
+
+      {showCalculator && (
+        <CalculatorModal
+          expr={calcExpr}
+          onChange={setCalcExpr}
+          onApply={applyCalculator}
+          onClose={() => setShowCalculator(false)}
         />
       )}
     </main>
@@ -1260,6 +1291,87 @@ function AnnualReportModal({
             📤 年間の取引明細CSVを書き出す
           </button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+const CALC_KEYS = [
+  ["7", "8", "9", "÷"],
+  ["4", "5", "6", "×"],
+  ["1", "2", "3", "−"],
+  ["C", "0", ".", "+"],
+] as const;
+
+function CalculatorModal({
+  expr,
+  onChange,
+  onApply,
+  onClose,
+}: {
+  expr: string;
+  onChange: (expr: string) => void;
+  onApply: () => void;
+  onClose: () => void;
+}) {
+  const preview = evaluateExpression(expr);
+
+  function press(key: string) {
+    onChange(pressKey(expr, key));
+  }
+
+  return (
+    <div className="fixed inset-0 z-30 bg-black/40 flex items-end sm:items-center justify-center">
+      <div className="bg-background w-full sm:max-w-xs sm:rounded-3xl rounded-t-3xl p-5">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-bold text-lg">🧮 電卓</h2>
+          <button type="button" onClick={onClose} className="text-muted text-2xl leading-none px-2">
+            ×
+          </button>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm p-4 mb-3">
+          <div className="flex items-start justify-between gap-2">
+            <p className="text-sm text-muted min-h-[1.25rem] truncate flex-1 text-right">{expr || "0"}</p>
+            <button
+              type="button"
+              onClick={() => press("back")}
+              aria-label="1文字削除"
+              className="text-muted text-lg leading-none shrink-0"
+            >
+              ⌫
+            </button>
+          </div>
+          <p className="text-3xl font-bold tabular-nums truncate text-right">
+            {preview != null ? formatYen(preview) : "¥0"}
+          </p>
+        </div>
+
+        <div className="grid grid-cols-4 gap-2 mb-3">
+          {CALC_KEYS.map((row) =>
+            row.map((key) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => press(key)}
+                className={`py-3 rounded-xl text-lg font-semibold shadow-sm ${
+                  key === "C" ? "bg-white text-red-500" : "bg-white"
+                }`}
+              >
+                {key}
+              </button>
+            )),
+          )}
+        </div>
+
+        <button
+          type="button"
+          onClick={onApply}
+          disabled={preview == null}
+          className="w-full py-3 rounded-xl bg-accent text-white font-bold shadow-sm disabled:opacity-40"
+        >
+          = この金額を入力する
+        </button>
       </div>
     </div>
   );
