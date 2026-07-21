@@ -95,6 +95,8 @@ export default function Home() {
   const [showTemplateManager, setShowTemplateManager] = useState(false);
   const [showAnnualReport, setShowAnnualReport] = useState(false);
   const [templateDraft, setTemplateDraft] = useState<TemplateDraft>(emptyTemplateDraft());
+  const [quickRevenueDate, setQuickRevenueDate] = useState(() => todayStr());
+  const [quickRevenueAmount, setQuickRevenueAmount] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -391,6 +393,29 @@ export default function Home() {
     if (templateDraft.id === id) setTemplateDraft(emptyTemplateDraft());
   }
 
+  const quickRevenueValid =
+    quickRevenueAmount !== "" &&
+    Number.isFinite(Number(quickRevenueAmount)) &&
+    Number(quickRevenueAmount) > 0;
+
+  function handleQuickAddRevenue() {
+    if (!quickRevenueValid) return;
+    const newRecord: KeihiRecord = {
+      id: crypto.randomUUID(),
+      date: quickRevenueDate,
+      partner: "",
+      amount: Number(quickRevenueAmount),
+      category: null,
+      memo: "",
+      thumbnail: null,
+      createdAt: Date.now(),
+      kind: "revenue",
+    };
+    setRecords((prev) => [...prev, newRecord]);
+    setViewMonth(monthKey(quickRevenueDate));
+    setQuickRevenueAmount("");
+  }
+
   const diff = monthTotals.profit - prevMonthStats.profit;
 
   return (
@@ -422,6 +447,43 @@ export default function Home() {
           ›
         </button>
       </div>
+
+      <section className="bg-card rounded-2xl shadow-sm p-5 mb-4">
+        <p className="text-sm font-semibold text-muted mb-3">💰 売上をすぐ記録</p>
+        <div className="grid grid-cols-2 gap-3 mb-3">
+          <div>
+            <label className="block text-xs text-muted mb-1">日付</label>
+            <input
+              type="date"
+              value={quickRevenueDate}
+              onChange={(e) => setQuickRevenueDate(e.target.value)}
+              className="w-full bg-white rounded-xl px-3 py-2.5 shadow-sm text-sm outline-none"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-muted mb-1">金額</label>
+            <div className="flex items-center gap-1 bg-white rounded-xl px-3 py-2.5 shadow-sm">
+              <span className="text-muted">¥</span>
+              <input
+                type="number"
+                inputMode="numeric"
+                value={quickRevenueAmount}
+                onChange={(e) => setQuickRevenueAmount(e.target.value)}
+                placeholder="0"
+                className="flex-1 font-bold outline-none min-w-0"
+              />
+            </div>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={handleQuickAddRevenue}
+          disabled={!quickRevenueValid}
+          className="w-full py-2.5 rounded-xl bg-income text-white font-bold shadow-sm disabled:opacity-40"
+        >
+          この売上を記録する
+        </button>
+      </section>
 
       <section className="bg-card rounded-2xl shadow-sm p-5 mb-4 text-center">
         <p className="text-sm text-muted">今月の利益(差引金額)</p>
