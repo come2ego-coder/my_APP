@@ -302,6 +302,11 @@ export default function Home() {
             <p className="text-sm">右下のボタンでレシートを撮ってみましょう!</p>
           </div>
         )}
+        {groupedByDate.length > 0 && (
+          <p className="text-xs text-muted text-center -mb-1">
+            📝 記録をタップすると、修正や削除ができます
+          </p>
+        )}
         {groupedByDate.map((group) => (
           <div key={group.date}>
             <p className="text-xs text-muted mb-1.5 px-1">
