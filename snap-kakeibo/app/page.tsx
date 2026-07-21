@@ -280,10 +280,16 @@ export default function Home() {
       setPending((prev) => [...prev, { id, thumbnail, status: "analyzing" }]);
 
       const { mimeType, data } = dataUrlToBase64(analysisImage);
+      // A hung request must never leave a tile spinning forever, so give up
+      // and surface an error after 45s regardless of what the server does.
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 45000);
+
       fetch("/api/analyze-receipt", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ image: data, mimeType }),
+        signal: controller.signal,
       })
         .then(async (res) => {
           const result = await res.json();
@@ -301,12 +307,24 @@ export default function Home() {
             prev.map((p) => (p.id === id ? { ...p, status: "ready", result } : p)),
           );
         })
-        .catch(() => {
+        .catch((err) => {
+          const isTimeout = err instanceof Error && err.name === "AbortError";
           setPending((prev) =>
             prev.map((p) =>
-              p.id === id ? { ...p, status: "error", error: "画像の処理に失敗しました。" } : p,
+              p.id === id
+                ? {
+                    ...p,
+                    status: "error",
+                    error: isTimeout
+                      ? "読み取りに時間がかかりすぎました。もう一度お試しください。"
+                      : "画像の処理に失敗しました。",
+                  }
+                : p,
             ),
           );
+        })
+        .finally(() => {
+          clearTimeout(timeout);
         });
     } catch {
       // Resizing the photo itself failed; nothing was queued.

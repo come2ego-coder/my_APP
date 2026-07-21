@@ -2,6 +2,10 @@ import { GoogleGenAI, ApiError, Type } from "@google/genai";
 import { NextResponse } from "next/server";
 import { CATEGORIES } from "@/lib/categories";
 
+// Give the Gemini vision call enough headroom on Vercel's default function
+// timeout, which is otherwise too short for image analysis.
+export const maxDuration = 60;
+
 export async function POST(request: Request) {
   let body: unknown;
   try {
