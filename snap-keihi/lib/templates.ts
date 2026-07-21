@@ -1,11 +1,11 @@
-import type { PaymentMethod } from "./categories";
+import type { EntryKind } from "./categories";
 
 export type RecurringTemplate = {
   id: string;
   name: string;
   amount: number;
-  category: string;
-  paymentMethod: PaymentMethod;
+  category: string | null;
+  kind: EntryKind;
 };
 
 const STORAGE_KEY = "snap-keihi:templates";
@@ -19,7 +19,7 @@ export function loadTemplates(): RecurringTemplate[] {
     if (!Array.isArray(parsed)) return [];
     return parsed.map((t: RecurringTemplate) => ({
       ...t,
-      paymentMethod: t.paymentMethod ?? "personal",
+      kind: t.kind ?? "expense",
     }));
   } catch {
     return [];

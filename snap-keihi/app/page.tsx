@@ -4,11 +4,18 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   CATEGORIES,
   DEFAULT_CATEGORY_ID,
+  ENTRY_KINDS,
   getCategory,
-  PAYMENT_METHODS,
-  type PaymentMethod,
+  partnerLabel,
+  type EntryKind,
 } from "@/lib/categories";
-import { downloadCsv, recordsToCsv } from "@/lib/csv";
+import {
+  annualSummaryToCsv,
+  computeAnnualSummary,
+  downloadCsv,
+  recordsToCsv,
+  type AnnualSummary,
+} from "@/lib/csv";
 import { dataUrlToBase64, resizeImage } from "@/lib/image";
 import {
   type Record as KeihiRecord,
@@ -22,28 +29,26 @@ import { type RecurringTemplate, loadTemplates, saveTemplates } from "@/lib/temp
 type Draft = {
   id: string | null;
   date: string;
-  payee: string;
+  partner: string;
   amount: string;
   category: string;
   memo: string;
   thumbnail: string | null;
-  paymentMethod: PaymentMethod;
-  reimbursed: boolean;
+  kind: EntryKind;
   templateId?: string;
   splits?: { category: string; amount: string }[];
 };
 
-function emptyDraft(paymentMethod: PaymentMethod = "personal"): Draft {
+function emptyDraft(kind: EntryKind = "expense"): Draft {
   return {
     id: null,
     date: todayStr(),
-    payee: "",
+    partner: "",
     amount: "",
     category: DEFAULT_CATEGORY_ID,
     memo: "",
     thumbnail: null,
-    paymentMethod,
-    reimbursed: false,
+    kind,
   };
 }
 
@@ -52,15 +57,19 @@ type TemplateDraft = {
   name: string;
   amount: string;
   category: string;
-  paymentMethod: PaymentMethod;
+  kind: EntryKind;
 };
 
-function emptyTemplateDraft(paymentMethod: PaymentMethod = "personal"): TemplateDraft {
-  return { id: null, name: "", amount: "", category: DEFAULT_CATEGORY_ID, paymentMethod };
+function emptyTemplateDraft(kind: EntryKind = "expense"): TemplateDraft {
+  return { id: null, name: "", amount: "", category: DEFAULT_CATEGORY_ID, kind };
 }
 
 function formatYen(n: number): string {
   return `¥${Math.round(n).toLocaleString("ja-JP")}`;
+}
+
+function formatSigned(n: number): string {
+  return `${n >= 0 ? "+" : ""}${formatYen(n)}`;
 }
 
 function formatMonthLabel(ym: string): string {
@@ -79,10 +88,12 @@ export default function Home() {
   const [templates, setTemplates] = useState<RecurringTemplate[]>([]);
   const [hydrated, setHydrated] = useState(false);
   const [viewMonth, setViewMonth] = useState(() => todayStr().slice(0, 7));
+  const [viewYear, setViewYear] = useState(() => todayStr().slice(0, 4));
   const [draft, setDraft] = useState<Draft | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [analyzeNotice, setAnalyzeNotice] = useState<string | null>(null);
   const [showTemplateManager, setShowTemplateManager] = useState(false);
+  const [showAnnualReport, setShowAnnualReport] = useState(false);
   const [templateDraft, setTemplateDraft] = useState<TemplateDraft>(emptyTemplateDraft());
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -102,6 +113,7 @@ export default function Home() {
   }, [templates, hydrated]);
 
   const currentMonth = todayStr().slice(0, 7);
+  const currentYear = todayStr().slice(0, 4);
 
   const monthRecords = useMemo(
     () =>
@@ -111,38 +123,27 @@ export default function Home() {
     [records, viewMonth],
   );
 
-  const monthTotal = useMemo(
-    () => monthRecords.reduce((sum, r) => sum + r.amount, 0),
-    [monthRecords],
-  );
-  const pendingTotal = useMemo(
-    () =>
-      monthRecords
-        .filter((r) => r.paymentMethod === "personal" && !r.reimbursed)
-        .reduce((sum, r) => sum + r.amount, 0),
-    [monthRecords],
-  );
-  const settledTotal = useMemo(
-    () =>
-      monthRecords
-        .filter((r) => r.paymentMethod === "personal" && r.reimbursed)
-        .reduce((sum, r) => sum + r.amount, 0),
-    [monthRecords],
-  );
-  const companyTotal = useMemo(
-    () => monthRecords.filter((r) => r.paymentMethod === "company").reduce((sum, r) => sum + r.amount, 0),
-    [monthRecords],
-  );
+  function totalsFor(list: KeihiRecord[]) {
+    const revenue = list.filter((r) => r.kind === "revenue").reduce((sum, r) => sum + r.amount, 0);
+    const purchase = list.filter((r) => r.kind === "purchase").reduce((sum, r) => sum + r.amount, 0);
+    const expense = list.filter((r) => r.kind === "expense").reduce((sum, r) => sum + r.amount, 0);
+    return { revenue, purchase, expense, profit: revenue - purchase - expense };
+  }
 
-  const prevMonthTotal = useMemo(() => {
+  const monthTotals = useMemo(() => totalsFor(monthRecords), [monthRecords]);
+
+  const prevMonthStats = useMemo(() => {
     const prev = shiftMonth(viewMonth, -1);
-    return records.filter((r) => monthKey(r.date) === prev).reduce((sum, r) => sum + r.amount, 0);
+    const prevRecords = records.filter((r) => monthKey(r.date) === prev);
+    return { hasData: prevRecords.length > 0, profit: totalsFor(prevRecords).profit };
   }, [records, viewMonth]);
 
   const categoryBreakdown = useMemo(() => {
     const sums = new Map<string, number>();
     for (const r of monthRecords) {
-      sums.set(r.category, (sums.get(r.category) ?? 0) + r.amount);
+      if (r.kind !== "expense") continue;
+      const key = r.category ?? DEFAULT_CATEGORY_ID;
+      sums.set(key, (sums.get(key) ?? 0) + r.amount);
     }
     const max = Math.max(1, ...sums.values());
     return CATEGORIES.map((c) => ({ category: c, amount: sums.get(c.id) ?? 0 }))
@@ -150,10 +151,10 @@ export default function Home() {
       .sort((a, b) => b.amount - a.amount)
       .map((x) => ({
         ...x,
-        pct: Math.round((x.amount / Math.max(1, monthTotal)) * 100),
+        pct: Math.round((x.amount / Math.max(1, monthTotals.expense)) * 100),
         barPct: (x.amount / max) * 100,
       }));
-  }, [monthRecords, monthTotal]);
+  }, [monthRecords, monthTotals]);
 
   const groupedByDate = useMemo(() => {
     const groups: { date: string; items: KeihiRecord[] }[] = [];
@@ -165,9 +166,14 @@ export default function Home() {
     return groups;
   }, [monthRecords]);
 
+  const annualSummary: AnnualSummary = useMemo(
+    () => computeAnnualSummary(records, viewYear),
+    [records, viewYear],
+  );
+
   function openManualEntry() {
     setAnalyzeNotice(null);
-    setDraft(emptyDraft());
+    setDraft(emptyDraft("expense"));
   }
 
   function openEdit(record: KeihiRecord) {
@@ -175,13 +181,12 @@ export default function Home() {
     setDraft({
       id: record.id,
       date: record.date,
-      payee: record.payee,
+      partner: record.partner,
       amount: String(record.amount),
-      category: record.category,
+      category: record.category ?? DEFAULT_CATEGORY_ID,
       memo: record.memo,
       thumbnail: record.thumbnail,
-      paymentMethod: record.paymentMethod,
-      reimbursed: record.reimbursed,
+      kind: record.kind,
       templateId: record.templateId,
     });
   }
@@ -192,13 +197,12 @@ export default function Home() {
     setDraft({
       id: null,
       date: isCurrentMonth ? todayStr() : `${viewMonth}-01`,
-      payee: template.name,
+      partner: template.name,
       amount: String(template.amount),
-      category: template.category,
+      category: template.category ?? DEFAULT_CATEGORY_ID,
       memo: "",
       thumbnail: null,
-      paymentMethod: template.paymentMethod,
-      reimbursed: false,
+      kind: template.kind,
       templateId: template.id,
     });
   }
@@ -219,7 +223,7 @@ export default function Home() {
         resizeImage(file, 160, 0.5),
       ]);
 
-      setDraft({ ...emptyDraft(), thumbnail });
+      setDraft({ ...emptyDraft("expense"), thumbnail });
       setAnalyzing(true);
 
       const { mimeType, data } = dataUrlToBase64(analysisImage);
@@ -239,7 +243,7 @@ export default function Home() {
         cur
           ? {
               ...cur,
-              payee: result.payee || "",
+              partner: result.partner || "",
               date: result.date || cur.date,
               amount: result.amount != null ? String(result.amount) : "",
               category: result.category || DEFAULT_CATEGORY_ID,
@@ -266,14 +270,13 @@ export default function Home() {
     const splitRecords: KeihiRecord[] = (draft.splits ?? []).map((s) => ({
       id: crypto.randomUUID(),
       date: draft.date,
-      payee: draft.payee.trim(),
+      partner: draft.partner.trim(),
       amount: Number(s.amount),
       category: s.category,
       memo: draft.memo.trim(),
       thumbnail: draft.thumbnail,
       createdAt: Date.now(),
-      paymentMethod: draft.paymentMethod,
-      reimbursed: draft.paymentMethod === "personal" ? draft.reimbursed : false,
+      kind: draft.kind,
     }));
 
     if (draft.id) {
@@ -283,12 +286,11 @@ export default function Home() {
             ? {
                 ...r,
                 date: draft.date,
-                payee: draft.payee.trim(),
+                partner: draft.partner.trim(),
                 amount,
-                category: draft.category,
+                category: draft.kind === "expense" ? draft.category : null,
                 memo: draft.memo.trim(),
-                paymentMethod: draft.paymentMethod,
-                reimbursed: draft.paymentMethod === "personal" ? draft.reimbursed : false,
+                kind: draft.kind,
               }
             : r,
         ),
@@ -298,14 +300,13 @@ export default function Home() {
       const newRecord: KeihiRecord = {
         id: crypto.randomUUID(),
         date: draft.date,
-        payee: draft.payee.trim(),
+        partner: draft.partner.trim(),
         amount,
-        category: draft.category,
+        category: draft.kind === "expense" ? draft.category : null,
         memo: draft.memo.trim(),
         thumbnail: draft.thumbnail,
         createdAt: Date.now(),
-        paymentMethod: draft.paymentMethod,
-        reimbursed: draft.paymentMethod === "personal" ? draft.reimbursed : false,
+        kind: draft.kind,
         templateId: draft.templateId,
       };
       setRecords((prev) => [...prev, newRecord, ...splitRecords]);
@@ -320,16 +321,22 @@ export default function Home() {
     setDraft(null);
   }
 
-  function toggleReimbursed(id: string) {
-    setRecords((prev) => prev.map((r) => (r.id === id ? { ...r, reimbursed: !r.reimbursed } : r)));
-  }
-
-  function handleExportCsv() {
+  function handleExportMonthCsv() {
     const sorted = [...monthRecords].sort((a, b) =>
       a.date < b.date ? -1 : a.date > b.date ? 1 : a.createdAt - b.createdAt,
     );
-    const csv = recordsToCsv(sorted);
-    downloadCsv(`経費_${viewMonth}.csv`, csv);
+    downloadCsv(`取引明細_${viewMonth}.csv`, recordsToCsv(sorted));
+  }
+
+  function handleExportAnnualSummaryCsv() {
+    downloadCsv(`確定申告用_${viewYear}.csv`, annualSummaryToCsv(annualSummary));
+  }
+
+  function handleExportAnnualTransactionsCsv() {
+    const yearRecords = records
+      .filter((r) => r.date.slice(0, 4) === viewYear)
+      .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.createdAt - b.createdAt));
+    downloadCsv(`取引明細_${viewYear}年.csv`, recordsToCsv(yearRecords));
   }
 
   function openTemplateManager() {
@@ -342,8 +349,8 @@ export default function Home() {
       id: t.id,
       name: t.name,
       amount: String(t.amount),
-      category: t.category,
-      paymentMethod: t.paymentMethod,
+      category: t.category ?? DEFAULT_CATEGORY_ID,
+      kind: t.kind,
     });
   }
 
@@ -358,8 +365,8 @@ export default function Home() {
                 ...t,
                 name: templateDraft.name.trim(),
                 amount,
-                category: templateDraft.category,
-                paymentMethod: templateDraft.paymentMethod,
+                category: templateDraft.kind === "expense" ? templateDraft.category : null,
+                kind: templateDraft.kind,
               }
             : t,
         ),
@@ -371,8 +378,8 @@ export default function Home() {
           id: crypto.randomUUID(),
           name: templateDraft.name.trim(),
           amount,
-          category: templateDraft.category,
-          paymentMethod: templateDraft.paymentMethod,
+          category: templateDraft.kind === "expense" ? templateDraft.category : null,
+          kind: templateDraft.kind,
         },
       ]);
     }
@@ -384,13 +391,13 @@ export default function Home() {
     if (templateDraft.id === id) setTemplateDraft(emptyTemplateDraft());
   }
 
-  const diff = monthTotal - prevMonthTotal;
+  const diff = monthTotals.profit - prevMonthStats.profit;
 
   return (
     <main className="flex-1 w-full max-w-lg mx-auto px-4 pb-28 pt-6 sm:pt-10">
       <header className="text-center mb-6">
         <h1 className="text-2xl font-bold text-accent-deep tracking-wide">💼 パシャ経費</h1>
-        <p className="mt-1 text-sm text-muted">領収書を撮るだけ。精算もスムーズに。</p>
+        <p className="mt-1 text-sm text-muted">売上・仕入・経費を記録して、確定申告もこのまま。</p>
       </header>
 
       <div className="flex items-center justify-center gap-4 mb-4">
@@ -417,41 +424,53 @@ export default function Home() {
       </div>
 
       <section className="bg-card rounded-2xl shadow-sm p-5 mb-4 text-center">
-        <p className="text-sm text-muted">今月の経費合計</p>
-        <p className="text-4xl font-bold text-accent-deep mt-1">{formatYen(monthTotal)}</p>
-        {prevMonthTotal > 0 && (
+        <p className="text-sm text-muted">今月の利益(差引金額)</p>
+        <p
+          className={`text-4xl font-bold mt-1 ${monthTotals.profit >= 0 ? "text-income" : "text-loss"}`}
+        >
+          {formatSigned(monthTotals.profit)}
+        </p>
+        {prevMonthStats.hasData && (
           <p className="text-xs text-muted mt-1">
-            先月比 {diff >= 0 ? "+" : ""}
-            {formatYen(diff)}
+            先月比 {formatSigned(diff)}
           </p>
         )}
         <div className="flex justify-center gap-6 mt-4 pt-4 border-t border-black/5">
           <div>
-            <p className="text-xs text-muted">要精算</p>
-            <p className="text-lg font-semibold text-pending tabular-nums">{formatYen(pendingTotal)}</p>
+            <p className="text-xs text-muted">売上</p>
+            <p className="text-lg font-semibold text-income tabular-nums">{formatYen(monthTotals.revenue)}</p>
           </div>
           <div>
-            <p className="text-xs text-muted">精算済み</p>
-            <p className="text-lg font-semibold text-settled tabular-nums">{formatYen(settledTotal)}</p>
+            <p className="text-xs text-muted">仕入</p>
+            <p className="text-lg font-semibold tabular-nums">{formatYen(monthTotals.purchase)}</p>
           </div>
           <div>
-            <p className="text-xs text-muted">法人カード</p>
-            <p className="text-lg font-semibold tabular-nums">{formatYen(companyTotal)}</p>
+            <p className="text-xs text-muted">経費</p>
+            <p className="text-lg font-semibold tabular-nums">{formatYen(monthTotals.expense)}</p>
           </div>
         </div>
-        <button
-          type="button"
-          onClick={handleExportCsv}
-          disabled={monthRecords.length === 0}
-          className="mt-4 text-xs text-accent-deep underline disabled:opacity-30 disabled:no-underline"
-        >
-          📤 この月をCSVで書き出す
-        </button>
+        <div className="flex justify-center gap-4 mt-4">
+          <button
+            type="button"
+            onClick={handleExportMonthCsv}
+            disabled={monthRecords.length === 0}
+            className="text-xs text-accent-deep underline disabled:opacity-30 disabled:no-underline"
+          >
+            📤 この月をCSVで書き出す
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowAnnualReport(true)}
+            className="text-xs text-accent-deep underline"
+          >
+            🧾 確定申告用の年間集計
+          </button>
+        </div>
       </section>
 
       {categoryBreakdown.length > 0 && (
         <section className="bg-card rounded-2xl shadow-sm p-5 mb-4">
-          <p className="text-sm font-semibold text-muted mb-3">カテゴリ別</p>
+          <p className="text-sm font-semibold text-muted mb-3">経費の科目別内訳</p>
           <div className="flex flex-col gap-2.5">
             {categoryBreakdown.map(({ category, amount, pct, barPct }) => (
               <div key={category.id} className="flex items-center gap-2 text-sm">
@@ -484,23 +503,28 @@ export default function Home() {
         </div>
         {templates.length === 0 ? (
           <p className="text-xs text-muted">
-            定期券や毎月の通信費など、よく使う項目を登録しておくと毎月ワンタップで記録できます。
+            定期券や毎月の通信費、定額の売上など、よく使う項目を登録しておくと毎月ワンタップで記録できます。
           </p>
         ) : (
           <div className="flex flex-col gap-2">
             {templates.map((t) => {
-              const cat = getCategory(t.category);
+              const kindMeta = ENTRY_KINDS.find((k) => k.id === t.kind)!;
+              const cat = t.kind === "expense" ? getCategory(t.category) : null;
               const addedRecord = monthRecords.find((r) => r.templateId === t.id);
               return (
                 <div key={t.id} className="flex items-center gap-2 text-sm">
-                  <span className="w-6 text-center">{cat.emoji}</span>
+                  <span className="w-6 text-center">{cat?.emoji ?? kindMeta.emoji}</span>
                   <span className="flex-1 min-w-0 truncate">{t.name}</span>
-                  <span className="shrink-0 tabular-nums text-muted">{formatYen(t.amount)}</span>
+                  <span
+                    className={`shrink-0 tabular-nums ${t.kind === "revenue" ? "text-income" : "text-muted"}`}
+                  >
+                    {formatYen(t.amount)}
+                  </span>
                   {addedRecord ? (
                     <button
                       type="button"
                       onClick={() => openEdit(addedRecord)}
-                      className="shrink-0 text-xs px-2.5 py-1 rounded-full bg-settled/10 text-settled font-medium"
+                      className="shrink-0 text-xs px-2.5 py-1 rounded-full bg-income/10 text-income font-medium"
                     >
                       ✓ 記録済み
                     </button>
@@ -542,57 +566,43 @@ export default function Home() {
             </p>
             <div className="bg-card rounded-2xl shadow-sm divide-y divide-black/5 overflow-hidden">
               {group.items.map((r) => {
-                const cat = getCategory(r.category);
+                const kindMeta = ENTRY_KINDS.find((k) => k.id === r.kind)!;
+                const cat = r.kind === "expense" ? getCategory(r.category) : null;
                 return (
-                  <div key={r.id} className="w-full flex items-center gap-3 px-4 py-3">
-                    <button
-                      type="button"
-                      onClick={() => openEdit(r)}
-                      className="flex-1 flex items-center gap-3 text-left min-w-0"
-                    >
-                      {r.thumbnail ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={r.thumbnail}
-                          alt=""
-                          className="w-10 h-10 rounded-lg object-cover shrink-0"
-                        />
-                      ) : (
-                        <span className="w-10 h-10 rounded-lg bg-black/5 flex items-center justify-center text-lg shrink-0">
-                          {cat.emoji}
-                        </span>
-                      )}
-                      <span className="flex-1 min-w-0">
-                        <span className="block text-sm font-medium truncate">
-                          {r.payee || cat.label}
-                        </span>
-                        <span className="block text-xs text-muted truncate">
-                          {cat.emoji} {cat.label}
-                          {r.memo ? ` ・ ${r.memo}` : ""}
-                        </span>
+                  <button
+                    key={r.id}
+                    type="button"
+                    onClick={() => openEdit(r)}
+                    className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-black/[0.02]"
+                  >
+                    {r.thumbnail ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={r.thumbnail}
+                        alt=""
+                        className="w-10 h-10 rounded-lg object-cover shrink-0"
+                      />
+                    ) : (
+                      <span className="w-10 h-10 rounded-lg bg-black/5 flex items-center justify-center text-lg shrink-0">
+                        {cat?.emoji ?? kindMeta.emoji}
                       </span>
-                    </button>
-                    <span className="shrink-0 flex flex-col items-end gap-1">
-                      <span className="font-semibold tabular-nums">{formatYen(r.amount)}</span>
-                      {r.paymentMethod === "company" ? (
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-black/5 text-muted">
-                          🏢 法人
-                        </span>
-                      ) : r.reimbursed ? (
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-settled/10 text-settled">
-                          ✓ 精算済み
-                        </span>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => toggleReimbursed(r.id)}
-                          className="text-[10px] px-2 py-0.5 rounded-full bg-pending/10 text-pending font-medium"
-                        >
-                          未精算
-                        </button>
-                      )}
+                    )}
+                    <span className="flex-1 min-w-0">
+                      <span className="block text-sm font-medium truncate">
+                        {r.partner || cat?.label || kindMeta.label}
+                      </span>
+                      <span className="block text-xs text-muted truncate">
+                        {cat ? `${cat.emoji} ${cat.label}` : `${kindMeta.emoji} ${kindMeta.label}`}
+                        {r.memo ? ` ・ ${r.memo}` : ""}
+                      </span>
                     </span>
-                  </div>
+                    <span
+                      className={`shrink-0 font-semibold tabular-nums ${r.kind === "revenue" ? "text-income" : ""}`}
+                    >
+                      {r.kind === "revenue" ? "+" : ""}
+                      {formatYen(r.amount)}
+                    </span>
+                  </button>
                 );
               })}
             </div>
@@ -648,8 +658,20 @@ export default function Home() {
           onSave={saveTemplateDraft}
           onSelect={selectTemplateForEdit}
           onDelete={deleteTemplate}
-          onNew={(paymentMethod) => setTemplateDraft(emptyTemplateDraft(paymentMethod))}
+          onNew={(kind) => setTemplateDraft(emptyTemplateDraft(kind))}
           onClose={() => setShowTemplateManager(false)}
+        />
+      )}
+
+      {showAnnualReport && (
+        <AnnualReportModal
+          year={viewYear}
+          summary={annualSummary}
+          canGoNext={viewYear < currentYear}
+          onShiftYear={(delta) => setViewYear((y) => String(Number(y) + delta))}
+          onExportSummary={handleExportAnnualSummaryCsv}
+          onExportTransactions={handleExportAnnualTransactionsCsv}
+          onClose={() => setShowAnnualReport(false)}
         />
       )}
     </main>
@@ -682,9 +704,10 @@ function EntryModal({
     CATEGORIES.find((c) => c.id !== draft.category)?.id ?? CATEGORIES[0].id,
   );
 
-  function switchPaymentMethod(paymentMethod: PaymentMethod) {
-    if (paymentMethod === draft.paymentMethod) return;
-    onChange({ ...draft, paymentMethod, reimbursed: paymentMethod === "personal" ? draft.reimbursed : false });
+  function switchKind(kind: EntryKind) {
+    if (kind === draft.kind) return;
+    onChange({ ...draft, kind, splits: [] });
+    setShowSplitForm(false);
   }
 
   function confirmSplit() {
@@ -717,6 +740,25 @@ function EntryModal({
           </button>
         </div>
 
+        <div className="grid grid-cols-3 gap-2 mb-4">
+          {ENTRY_KINDS.map((k) => (
+            <button
+              key={k.id}
+              type="button"
+              onClick={() => switchKind(k.id)}
+              className={`py-2 rounded-xl text-sm font-semibold border transition-colors ${
+                draft.kind === k.id
+                  ? k.id === "revenue"
+                    ? "border-income bg-income/10 text-income"
+                    : "border-accent bg-accent/10 text-accent-deep"
+                  : "border-transparent bg-white text-foreground/70"
+              }`}
+            >
+              {k.emoji} {k.label}
+            </button>
+          ))}
+        </div>
+
         {draft.thumbnail && (
           <div className="flex justify-center mb-3">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -735,56 +777,6 @@ function EntryModal({
 
         <div className="flex flex-col gap-3">
           <div>
-            <label className="block text-xs text-muted mb-1">支払方法</label>
-            <div className="grid grid-cols-2 gap-2">
-              {PAYMENT_METHODS.map((p) => (
-                <button
-                  key={p.id}
-                  type="button"
-                  onClick={() => switchPaymentMethod(p.id)}
-                  className={`py-2 rounded-xl text-sm font-semibold border transition-colors ${
-                    draft.paymentMethod === p.id
-                      ? "border-accent bg-accent/10 text-accent-deep"
-                      : "border-transparent bg-white text-foreground/70"
-                  }`}
-                >
-                  {p.emoji} {p.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {draft.paymentMethod === "personal" && (
-            <div>
-              <label className="block text-xs text-muted mb-1">精算状況</label>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => onChange({ ...draft, reimbursed: false })}
-                  className={`py-2 rounded-xl text-sm font-semibold border transition-colors ${
-                    !draft.reimbursed
-                      ? "border-pending bg-pending/10 text-pending"
-                      : "border-transparent bg-white text-foreground/70"
-                  }`}
-                >
-                  未精算
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onChange({ ...draft, reimbursed: true })}
-                  className={`py-2 rounded-xl text-sm font-semibold border transition-colors ${
-                    draft.reimbursed
-                      ? "border-settled bg-settled/10 text-settled"
-                      : "border-transparent bg-white text-foreground/70"
-                  }`}
-                >
-                  精算済み
-                </button>
-              </div>
-            </div>
-          )}
-
-          <div>
             <label className="block text-xs text-muted mb-1">金額</label>
             <div className="flex items-center gap-1 bg-white rounded-xl px-3 py-2.5 shadow-sm">
               <span className="text-lg text-muted">¥</span>
@@ -799,28 +791,30 @@ function EntryModal({
             </div>
           </div>
 
-          <div>
-            <label className="block text-xs text-muted mb-1">カテゴリ</label>
-            <div className="grid grid-cols-3 gap-2">
-              {CATEGORIES.map((c) => (
-                <button
-                  key={c.id}
-                  type="button"
-                  onClick={() => onChange({ ...draft, category: c.id })}
-                  className={`rounded-xl px-2 py-2 text-xs flex flex-col items-center gap-0.5 border transition-colors ${
-                    draft.category === c.id
-                      ? "border-accent bg-accent/10 text-accent-deep"
-                      : "border-transparent bg-white text-foreground/80"
-                  }`}
-                >
-                  <span className="text-lg">{c.emoji}</span>
-                  {c.label}
-                </button>
-              ))}
+          {draft.kind === "expense" && (
+            <div>
+              <label className="block text-xs text-muted mb-1">科目</label>
+              <div className="grid grid-cols-3 gap-2">
+                {CATEGORIES.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => onChange({ ...draft, category: c.id })}
+                    className={`rounded-xl px-2 py-2 text-xs flex flex-col items-center gap-0.5 border transition-colors ${
+                      draft.category === c.id
+                        ? "border-accent bg-accent/10 text-accent-deep"
+                        : "border-transparent bg-white text-foreground/80"
+                    }`}
+                  >
+                    <span className="text-lg">{c.emoji}</span>
+                    {c.label}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
-          {splits.length > 0 && (
+          {draft.kind === "expense" && splits.length > 0 && (
             <div className="flex flex-col gap-1.5">
               {splits.map((s, i) => {
                 const cat = getCategory(s.category);
@@ -846,57 +840,58 @@ function EntryModal({
             </div>
           )}
 
-          {showSplitForm ? (
-            <div className="bg-white rounded-xl p-3 shadow-sm flex flex-col gap-2">
-              <p className="text-xs text-muted">別カテゴリに分ける金額</p>
-              <div className="flex items-center gap-1">
-                <span className="text-muted">¥</span>
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  value={splitAmount}
-                  onChange={(e) => setSplitAmount(e.target.value)}
-                  placeholder="0"
-                  className="flex-1 text-sm font-semibold outline-none min-w-0"
-                />
+          {draft.kind === "expense" &&
+            (showSplitForm ? (
+              <div className="bg-white rounded-xl p-3 shadow-sm flex flex-col gap-2">
+                <p className="text-xs text-muted">別の科目に分ける金額</p>
+                <div className="flex items-center gap-1">
+                  <span className="text-muted">¥</span>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    value={splitAmount}
+                    onChange={(e) => setSplitAmount(e.target.value)}
+                    placeholder="0"
+                    className="flex-1 text-sm font-semibold outline-none min-w-0"
+                  />
+                </div>
+                <select
+                  value={splitCategory}
+                  onChange={(e) => setSplitCategory(e.target.value)}
+                  className="text-sm rounded-lg border border-black/10 px-2 py-1.5 bg-white"
+                >
+                  {CATEGORIES.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.emoji} {c.label}
+                    </option>
+                  ))}
+                </select>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowSplitForm(false)}
+                    className="flex-1 py-2 text-xs rounded-lg bg-black/5"
+                  >
+                    キャンセル
+                  </button>
+                  <button
+                    type="button"
+                    onClick={confirmSplit}
+                    className="flex-1 py-2 text-xs rounded-lg bg-accent-deep text-white font-semibold"
+                  >
+                    分ける
+                  </button>
+                </div>
               </div>
-              <select
-                value={splitCategory}
-                onChange={(e) => setSplitCategory(e.target.value)}
-                className="text-sm rounded-lg border border-black/10 px-2 py-1.5 bg-white"
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowSplitForm(true)}
+                className="text-xs text-accent-deep underline self-start"
               >
-                {CATEGORIES.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.emoji} {c.label}
-                  </option>
-                ))}
-              </select>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setShowSplitForm(false)}
-                  className="flex-1 py-2 text-xs rounded-lg bg-black/5"
-                >
-                  キャンセル
-                </button>
-                <button
-                  type="button"
-                  onClick={confirmSplit}
-                  className="flex-1 py-2 text-xs rounded-lg bg-accent-deep text-white font-semibold"
-                >
-                  分ける
-                </button>
-              </div>
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setShowSplitForm(true)}
-              className="text-xs text-accent-deep underline self-start"
-            >
-              ✂️ 別のカテゴリに分ける
-            </button>
-          )}
+                ✂️ 別の科目に分ける
+              </button>
+            ))}
 
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -909,11 +904,11 @@ function EntryModal({
               />
             </div>
             <div>
-              <label className="block text-xs text-muted mb-1">支払先</label>
+              <label className="block text-xs text-muted mb-1">{partnerLabel(draft.kind)}</label>
               <input
                 type="text"
-                value={draft.payee}
-                onChange={(e) => onChange({ ...draft, payee: e.target.value })}
+                value={draft.partner}
+                onChange={(e) => onChange({ ...draft, partner: e.target.value })}
                 placeholder="任意"
                 className="w-full bg-white rounded-xl px-3 py-2.5 shadow-sm text-sm outline-none"
               />
@@ -972,7 +967,7 @@ function TemplateManagerModal({
   onSave: () => void;
   onSelect: (t: RecurringTemplate) => void;
   onDelete: (id: string) => void;
-  onNew: (paymentMethod: PaymentMethod) => void;
+  onNew: (kind: EntryKind) => void;
   onClose: () => void;
 }) {
   const valid = draft.name.trim() !== "" && Number.isFinite(Number(draft.amount)) && Number(draft.amount) > 0;
@@ -990,7 +985,8 @@ function TemplateManagerModal({
         {templates.length > 0 && (
           <div className="bg-card rounded-2xl shadow-sm divide-y divide-black/5 overflow-hidden mb-4">
             {templates.map((t) => {
-              const cat = getCategory(t.category);
+              const kindMeta = ENTRY_KINDS.find((k) => k.id === t.kind)!;
+              const cat = t.kind === "expense" ? getCategory(t.category) : null;
               return (
                 <div key={t.id} className="flex items-center gap-2 px-3 py-2.5">
                   <button
@@ -998,9 +994,11 @@ function TemplateManagerModal({
                     onClick={() => onSelect(t)}
                     className="flex-1 flex items-center gap-2 min-w-0 text-left"
                   >
-                    <span className="w-6 text-center">{cat.emoji}</span>
+                    <span className="w-6 text-center">{cat?.emoji ?? kindMeta.emoji}</span>
                     <span className="flex-1 min-w-0 truncate text-sm">{t.name}</span>
-                    <span className="text-sm tabular-nums">{formatYen(t.amount)}</span>
+                    <span className={`text-sm tabular-nums ${t.kind === "revenue" ? "text-income" : ""}`}>
+                      {formatYen(t.amount)}
+                    </span>
                   </button>
                   <button
                     type="button"
@@ -1015,19 +1013,21 @@ function TemplateManagerModal({
           </div>
         )}
 
-        <div className="grid grid-cols-2 gap-2 mb-3">
-          {PAYMENT_METHODS.map((p) => (
+        <div className="grid grid-cols-3 gap-2 mb-3">
+          {ENTRY_KINDS.map((k) => (
             <button
-              key={p.id}
+              key={k.id}
               type="button"
-              onClick={() => onNew(p.id)}
+              onClick={() => onNew(k.id)}
               className={`py-2 rounded-xl text-sm font-semibold border transition-colors ${
-                draft.paymentMethod === p.id
-                  ? "border-accent bg-accent/10 text-accent-deep"
+                draft.kind === k.id
+                  ? k.id === "revenue"
+                    ? "border-income bg-income/10 text-income"
+                    : "border-accent bg-accent/10 text-accent-deep"
                   : "border-transparent bg-white text-foreground/70"
               }`}
             >
-              {p.emoji} {p.label}
+              {k.emoji} {k.label}
             </button>
           ))}
         </div>
@@ -1057,26 +1057,28 @@ function TemplateManagerModal({
               />
             </div>
           </div>
-          <div>
-            <label className="block text-xs text-muted mb-1">カテゴリ</label>
-            <div className="grid grid-cols-3 gap-2">
-              {CATEGORIES.map((c) => (
-                <button
-                  key={c.id}
-                  type="button"
-                  onClick={() => onChangeDraft({ ...draft, category: c.id })}
-                  className={`rounded-xl px-2 py-2 text-xs flex flex-col items-center gap-0.5 border transition-colors ${
-                    draft.category === c.id
-                      ? "border-accent bg-accent/10 text-accent-deep"
-                      : "border-transparent bg-white text-foreground/80"
-                  }`}
-                >
-                  <span className="text-lg">{c.emoji}</span>
-                  {c.label}
-                </button>
-              ))}
+          {draft.kind === "expense" && (
+            <div>
+              <label className="block text-xs text-muted mb-1">科目</label>
+              <div className="grid grid-cols-3 gap-2">
+                {CATEGORIES.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => onChangeDraft({ ...draft, category: c.id })}
+                    className={`rounded-xl px-2 py-2 text-xs flex flex-col items-center gap-0.5 border transition-colors ${
+                      draft.category === c.id
+                        ? "border-accent bg-accent/10 text-accent-deep"
+                        : "border-transparent bg-white text-foreground/80"
+                    }`}
+                  >
+                    <span className="text-lg">{c.emoji}</span>
+                    {c.label}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         <button
@@ -1087,6 +1089,115 @@ function TemplateManagerModal({
         >
           {draft.id ? "更新する" : "追加する"}
         </button>
+      </div>
+    </div>
+  );
+}
+
+function AnnualReportModal({
+  year,
+  summary,
+  canGoNext,
+  onShiftYear,
+  onExportSummary,
+  onExportTransactions,
+  onClose,
+}: {
+  year: string;
+  summary: AnnualSummary;
+  canGoNext: boolean;
+  onShiftYear: (delta: number) => void;
+  onExportSummary: () => void;
+  onExportTransactions: () => void;
+  onClose: () => void;
+}) {
+  const nonZeroCategories = summary.expenseByCategory.filter((c) => c.amount > 0);
+
+  return (
+    <div className="fixed inset-0 z-20 bg-black/40 flex items-end sm:items-center justify-center">
+      <div className="bg-background w-full sm:max-w-md sm:rounded-3xl rounded-t-3xl p-5 max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-bold text-lg">確定申告用 年間集計</h2>
+          <button type="button" onClick={onClose} className="text-muted text-2xl leading-none px-2">
+            ×
+          </button>
+        </div>
+
+        <div className="flex items-center justify-center gap-4 mb-4">
+          <button
+            type="button"
+            onClick={() => onShiftYear(-1)}
+            className="w-9 h-9 rounded-full bg-white shadow-sm text-lg text-muted hover:text-accent-deep"
+            aria-label="前の年"
+          >
+            ‹
+          </button>
+          <span className="text-lg font-semibold min-w-[6rem] text-center">{year}年</span>
+          <button
+            type="button"
+            onClick={() => onShiftYear(1)}
+            disabled={!canGoNext}
+            className="w-9 h-9 rounded-full bg-white shadow-sm text-lg text-muted hover:text-accent-deep disabled:opacity-30 disabled:hover:text-muted"
+            aria-label="次の年"
+          >
+            ›
+          </button>
+        </div>
+
+        <div className="bg-card rounded-2xl shadow-sm divide-y divide-black/5 overflow-hidden mb-4">
+          <div className="flex items-center justify-between px-4 py-3 text-sm">
+            <span>売上(収入)金額</span>
+            <span className="font-semibold tabular-nums text-income">{formatYen(summary.revenueTotal)}</span>
+          </div>
+          <div className="flex items-center justify-between px-4 py-3 text-sm">
+            <span>仕入高</span>
+            <span className="font-semibold tabular-nums">{formatYen(summary.purchaseTotal)}</span>
+          </div>
+          <div className="flex items-center justify-between px-4 py-3 text-sm">
+            <span>経費合計</span>
+            <span className="font-semibold tabular-nums">{formatYen(summary.expenseTotal)}</span>
+          </div>
+          <div className="flex items-center justify-between px-4 py-3 text-sm bg-black/[0.02]">
+            <span className="font-semibold">差引金額(所得金額)</span>
+            <span
+              className={`font-bold tabular-nums ${summary.profit >= 0 ? "text-income" : "text-loss"}`}
+            >
+              {formatSigned(summary.profit)}
+            </span>
+          </div>
+        </div>
+
+        {nonZeroCategories.length > 0 && (
+          <div className="mb-4">
+            <p className="text-sm font-semibold text-muted mb-2">経費の科目別内訳</p>
+            <div className="bg-card rounded-2xl shadow-sm divide-y divide-black/5 overflow-hidden">
+              {nonZeroCategories.map(({ category, amount }) => (
+                <div key={category.id} className="flex items-center gap-2 px-4 py-2.5 text-sm">
+                  <span className="w-6 text-center">{category.emoji}</span>
+                  <span className="flex-1 min-w-0 truncate">{category.label}</span>
+                  <span className="tabular-nums text-muted">{formatYen(amount)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="flex flex-col gap-2">
+          <button
+            type="button"
+            onClick={onExportSummary}
+            className="w-full py-3 rounded-xl bg-accent text-white font-bold shadow-sm"
+          >
+            📤 確定申告用の科目別CSVを書き出す
+          </button>
+          <button
+            type="button"
+            onClick={onExportTransactions}
+            className="w-full py-3 rounded-xl bg-white text-accent-deep font-semibold shadow-sm"
+          >
+            📤 年間の取引明細CSVを書き出す
+          </button>
+        </div>
       </div>
     </div>
   );

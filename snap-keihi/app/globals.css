@@ -7,8 +7,8 @@
   --accent: #3b6fd6;
   --accent-deep: #29509e;
   --muted: #74808f;
-  --pending: #c9822e;
-  --settled: #3f8f6a;
+  --income: #3f8f6a;
+  --loss: #c25c5c;
 }
 
 @theme inline {
@@ -18,8 +18,8 @@
   --color-accent: var(--accent);
   --color-accent-deep: var(--accent-deep);
   --color-muted: var(--muted);
-  --color-pending: var(--pending);
-  --color-settled: var(--settled);
+  --color-income: var(--income);
+  --color-loss: var(--loss);
   --font-sans: var(--font-sans);
 }
 

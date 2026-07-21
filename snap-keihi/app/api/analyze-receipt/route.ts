@@ -37,14 +37,15 @@ export async function POST(request: Request) {
           parts: [
             { inlineData: { mimeType, data: image } },
             {
-              text: `これは仕事の経費精算用の領収書・レシートを確認できる画像です。紙のレシートや領収書の
+              text: `これは個人事業主の記帳用に、支払いを確認できる画像です。紙のレシートや領収書の
 写真の場合もあれば、交通系ICカードの利用履歴やモバイル決済アプリの「支払い完了」画面の
 スクリーンショットの場合もあります。内容を読み取って、以下を推測してください。
-- payee: 支払先(店名・会社名。読み取れなければ空文字)
+- partner: 支払先(店名・会社名。読み取れなければ空文字)
 - date: 支払い日。記載があればそれを "YYYY-MM-DD" 形式で。無ければ null
 - amount: 合計金額(税込の支払い総額)。数字のみ、円記号やカンマは含めない
-- category: 次の中から最も当てはまるもの1つを選ぶ: ${categoryIds.join(", ")}
-- memo: 経費精算の摘要欄に書けるような、主な支払い内容の要約を10〜15文字程度で
+- category: 確定申告の収支内訳書の経費科目のうち、次の中から最も当てはまるもの1つを選ぶ:
+  ${categoryIds.join(", ")}
+- memo: 帳簿の摘要欄に書けるような、主な支払い内容の要約を10〜15文字程度で
   (例: "取引先との打ち合わせ" や "新宿→渋谷 電車代")
 
 支払いの内容として読み取れない画像の場合は amount を null にしてください。`,
@@ -57,13 +58,13 @@ export async function POST(request: Request) {
         responseSchema: {
           type: Type.OBJECT,
           properties: {
-            payee: { type: Type.STRING },
+            partner: { type: Type.STRING },
             date: { type: Type.STRING, nullable: true },
             amount: { type: Type.NUMBER, nullable: true },
             category: { type: Type.STRING, enum: categoryIds },
             memo: { type: Type.STRING },
           },
-          required: ["payee", "category", "memo"],
+          required: ["partner", "category", "memo"],
         },
       },
     });
@@ -77,7 +78,7 @@ export async function POST(request: Request) {
     }
 
     const parsed = JSON.parse(text) as {
-      payee?: string;
+      partner?: string;
       date?: string | null;
       amount?: number | null;
       category?: string;
@@ -85,10 +86,10 @@ export async function POST(request: Request) {
     };
 
     return NextResponse.json({
-      payee: parsed.payee ?? "",
+      partner: parsed.partner ?? "",
       date: parsed.date ?? null,
       amount: typeof parsed.amount === "number" ? parsed.amount : null,
-      category: categoryIds.includes(parsed.category ?? "") ? parsed.category : "other",
+      category: categoryIds.includes(parsed.category ?? "") ? parsed.category : "misc",
       memo: parsed.memo ?? "",
     });
   } catch (error) {
