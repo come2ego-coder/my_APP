@@ -104,7 +104,16 @@ export default function Home() {
         const dataRes = await fetch("/api/data");
         if (!cancelled && dataRes.ok) {
           const data = await dataRes.json();
-          setRecords(data.records ?? []);
+          const serverRecords: KakeiboRecord[] = data.records ?? [];
+          // The server never stores photos (too large to sync). Keep this
+          // device's cached photo for any record it already recognizes.
+          setRecords((prev) => {
+            const localThumbnails = new Map(prev.map((r) => [r.id, r.thumbnail]));
+            return serverRecords.map((r) => ({
+              ...r,
+              thumbnail: r.thumbnail ?? localThumbnails.get(r.id) ?? null,
+            }));
+          });
           setTemplates(data.templates ?? []);
         }
       } catch {
@@ -122,10 +131,13 @@ export default function Home() {
     saveTemplates(templates);
     if (!authUser) return;
     const timer = setTimeout(() => {
+      // Photos stay on-device only: they're too large to bundle into every
+      // sync request, so the server only ever gets the record metadata.
+      const syncRecords = records.map((r) => ({ ...r, thumbnail: null }));
       fetch("/api/data", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ records, templates }),
+        body: JSON.stringify({ records: syncRecords, templates }),
       }).catch(() => {});
     }, 500);
     return () => clearTimeout(timer);
@@ -243,7 +255,7 @@ export default function Home() {
     try {
       const [analysisImage, thumbnail] = await Promise.all([
         resizeImage(file, 1024, 0.7),
-        resizeImage(file, 160, 0.5),
+        resizeImage(file, 720, 0.62),
       ]);
 
       setDraft({ ...emptyDraft("expense"), thumbnail, kindLocked: true });
@@ -262,21 +274,34 @@ export default function Home() {
         return;
       }
 
+      const breakdown: { category?: string; amount?: number }[] = Array.isArray(result.breakdown)
+        ? result.breakdown
+        : [];
+      const [first, ...rest] = breakdown;
+
       setDraft((cur) =>
         cur
           ? {
               ...cur,
               store: result.store || "",
               date: result.date || cur.date,
-              amount: result.amount != null ? String(result.amount) : "",
-              category: result.category || defaultCategoryForKind("expense"),
+              amount: first?.amount != null ? String(first.amount) : "",
+              category: first?.category || defaultCategoryForKind("expense"),
               memo: result.memo || "",
+              splits: rest.map((r) => ({
+                category: r.category || defaultCategoryForKind("expense"),
+                amount: String(r.amount ?? 0),
+              })),
             }
           : cur,
       );
 
-      if (result.amount == null) {
+      if (!first) {
         setAnalyzeNotice("金額を読み取れませんでした。手入力してください。");
+      } else if (rest.length > 0) {
+        setAnalyzeNotice(
+          `カテゴリが混在していたため、${breakdown.length}件に自動で分けました。内容を確認してください。`,
+        );
       }
     } catch {
       setAnalyzeNotice("画像の処理に失敗しました。手入力で保存できます。");
@@ -681,6 +706,7 @@ function EntryModal({
   const [splitCategory, setSplitCategory] = useState(
     categoryOptions.find((c) => c.id !== draft.category)?.id ?? categoryOptions[0].id,
   );
+  const [showFullImage, setShowFullImage] = useState(false);
 
   function switchKind(kind: EntryKind) {
     if (kind === draft.kind) return;
@@ -747,8 +773,17 @@ function EntryModal({
 
         {draft.thumbnail && (
           <div className="flex justify-center mb-3">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={draft.thumbnail} alt="" className="h-24 rounded-xl object-cover shadow-sm" />
+            <button type="button" onClick={() => setShowFullImage(true)} className="block">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={draft.thumbnail}
+                alt=""
+                className="h-32 rounded-xl object-cover shadow-sm"
+              />
+              <span className="block text-center text-xs text-accent-deep underline mt-1">
+                タップで拡大
+              </span>
+            </button>
           </div>
         )}
 
@@ -930,6 +965,29 @@ function EntryModal({
           </button>
         </div>
       </div>
+
+      {showFullImage && draft.thumbnail && (
+        <div
+          className="fixed inset-0 z-30 flex items-center justify-center p-4"
+          style={{ backgroundColor: "rgba(0,0,0,0.9)" }}
+          onClick={() => setShowFullImage(false)}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={draft.thumbnail}
+            alt=""
+            className="max-w-full max-h-full object-contain rounded-lg"
+          />
+          <button
+            type="button"
+            onClick={() => setShowFullImage(false)}
+            className="absolute top-4 right-4 text-white text-3xl leading-none"
+            aria-label="閉じる"
+          >
+            ×
+          </button>
+        </div>
+      )}
     </div>
   );
 }
