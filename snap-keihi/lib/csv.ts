@@ -1,4 +1,4 @@
-import { CATEGORIES, ENTRY_KINDS, getCategory } from "./categories";
+import { CATEGORIES, ENTRY_KINDS, PURCHASE_CATEGORIES, getCategoryForKind } from "./categories";
 import type { Record } from "./records";
 
 function escapeCell(value: string): string {
@@ -26,7 +26,7 @@ export function recordsToCsv(records: Record[]): string {
     kindLabel(r.kind),
     r.partner,
     String(r.amount),
-    r.kind === "expense" ? getCategory(r.category).label : "-",
+    getCategoryForKind(r.kind, r.category)?.label ?? "-",
     r.memo,
   ]);
   return toCsv([header, ...rows]);
@@ -36,10 +36,25 @@ export type AnnualSummary = {
   year: string;
   revenueTotal: number;
   purchaseTotal: number;
+  purchaseByCategory: { category: (typeof PURCHASE_CATEGORIES)[number]; amount: number }[];
   expenseByCategory: { category: (typeof CATEGORIES)[number]; amount: number }[];
   expenseTotal: number;
   profit: number;
 };
+
+function sumByCategory<C extends { id: string }>(
+  records: Record[],
+  kind: Record["kind"],
+  categories: C[],
+): { category: C; amount: number }[] {
+  const sums = new Map<string, number>();
+  for (const r of records) {
+    if (r.kind !== kind) continue;
+    const key = r.category ?? categories[categories.length - 1].id;
+    sums.set(key, (sums.get(key) ?? 0) + r.amount);
+  }
+  return categories.map((category) => ({ category, amount: sums.get(category.id) ?? 0 }));
+}
 
 export function computeAnnualSummary(records: Record[], year: string): AnnualSummary {
   const yearRecords = records.filter((r) => r.date.slice(0, 4) === year);
@@ -50,22 +65,15 @@ export function computeAnnualSummary(records: Record[], year: string): AnnualSum
     .filter((r) => r.kind === "purchase")
     .reduce((sum, r) => sum + r.amount, 0);
 
-  const sums = new Map<string, number>();
-  for (const r of yearRecords) {
-    if (r.kind !== "expense") continue;
-    const key = r.category ?? "misc";
-    sums.set(key, (sums.get(key) ?? 0) + r.amount);
-  }
-  const expenseByCategory = CATEGORIES.map((category) => ({
-    category,
-    amount: sums.get(category.id) ?? 0,
-  }));
+  const purchaseByCategory = sumByCategory(yearRecords, "purchase", PURCHASE_CATEGORIES);
+  const expenseByCategory = sumByCategory(yearRecords, "expense", CATEGORIES);
   const expenseTotal = expenseByCategory.reduce((sum, c) => sum + c.amount, 0);
 
   return {
     year,
     revenueTotal,
     purchaseTotal,
+    purchaseByCategory,
     expenseByCategory,
     expenseTotal,
     profit: revenueTotal - purchaseTotal - expenseTotal,

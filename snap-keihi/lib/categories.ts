@@ -35,6 +35,19 @@ export function getCategory(id: string | undefined | null): Category {
   return CATEGORIES.find((c) => c.id === id) ?? CATEGORIES[CATEGORIES.length - 1];
 }
 
+// 仕入(purchase) categories. The tax return only needs a single 仕入高
+// total, so this split is for the user's own tracking, not the form.
+export const PURCHASE_CATEGORIES: Category[] = [
+  { id: "alcohol", label: "酒代", emoji: "🍶", color: "#c9633e" },
+  { id: "ingredients", label: "食材", emoji: "🥬", color: "#5cae8f" },
+];
+
+export const DEFAULT_PURCHASE_CATEGORY_ID = "ingredients";
+
+export function getPurchaseCategory(id: string | undefined | null): Category {
+  return PURCHASE_CATEGORIES.find((c) => c.id === id) ?? PURCHASE_CATEGORIES[PURCHASE_CATEGORIES.length - 1];
+}
+
 export type EntryKind = "revenue" | "purchase" | "expense";
 
 export const ENTRY_KINDS: { id: EntryKind; label: string; emoji: string }[] = [
@@ -42,6 +55,26 @@ export const ENTRY_KINDS: { id: EntryKind; label: string; emoji: string }[] = [
   { id: "purchase", label: "仕入", emoji: "🛒" },
   { id: "expense", label: "経費", emoji: "🧾" },
 ];
+
+// Revenue entries have no category; expense and purchase each have their
+// own category set.
+export function categoriesForKind(kind: EntryKind): Category[] {
+  if (kind === "expense") return CATEGORIES;
+  if (kind === "purchase") return PURCHASE_CATEGORIES;
+  return [];
+}
+
+export function defaultCategoryForKind(kind: EntryKind): string | null {
+  if (kind === "expense") return DEFAULT_CATEGORY_ID;
+  if (kind === "purchase") return DEFAULT_PURCHASE_CATEGORY_ID;
+  return null;
+}
+
+export function getCategoryForKind(kind: EntryKind, id: string | undefined | null): Category | null {
+  if (kind === "expense") return getCategory(id);
+  if (kind === "purchase") return getPurchaseCategory(id);
+  return null;
+}
 
 export function partnerLabel(kind: EntryKind): string {
   if (kind === "revenue") return "取引先";

@@ -2,10 +2,11 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  CATEGORIES,
   DEFAULT_CATEGORY_ID,
   ENTRY_KINDS,
-  getCategory,
+  categoriesForKind,
+  defaultCategoryForKind,
+  getCategoryForKind,
   partnerLabel,
   type EntryKind,
 } from "@/lib/categories";
@@ -32,7 +33,7 @@ type Draft = {
   date: string;
   partner: string;
   amount: string;
-  category: string;
+  category: string | null;
   memo: string;
   thumbnail: string | null;
   kind: EntryKind;
@@ -46,7 +47,7 @@ function emptyDraft(kind: EntryKind = "expense"): Draft {
     date: todayStr(),
     partner: "",
     amount: "",
-    category: DEFAULT_CATEGORY_ID,
+    category: defaultCategoryForKind(kind),
     memo: "",
     thumbnail: null,
     kind,
@@ -57,12 +58,12 @@ type TemplateDraft = {
   id: string | null;
   name: string;
   amount: string;
-  category: string;
+  category: string | null;
   kind: EntryKind;
 };
 
 function emptyTemplateDraft(kind: EntryKind = "expense"): TemplateDraft {
-  return { id: null, name: "", amount: "", category: DEFAULT_CATEGORY_ID, kind };
+  return { id: null, name: "", amount: "", category: defaultCategoryForKind(kind), kind };
 }
 
 function formatYen(n: number): string {
@@ -145,23 +146,34 @@ export default function Home() {
     return { hasData: prevRecords.length > 0, profit: totalsFor(prevRecords).profit };
   }, [records, viewMonth]);
 
-  const categoryBreakdown = useMemo(() => {
+  function breakdownFor(list: KeihiRecord[], kind: EntryKind, total: number) {
+    const cats = categoriesForKind(kind);
     const sums = new Map<string, number>();
-    for (const r of monthRecords) {
-      if (r.kind !== "expense") continue;
-      const key = r.category ?? DEFAULT_CATEGORY_ID;
+    for (const r of list) {
+      if (r.kind !== kind) continue;
+      const key = r.category ?? cats[cats.length - 1].id;
       sums.set(key, (sums.get(key) ?? 0) + r.amount);
     }
     const max = Math.max(1, ...sums.values());
-    return CATEGORIES.map((c) => ({ category: c, amount: sums.get(c.id) ?? 0 }))
+    return cats
+      .map((c) => ({ category: c, amount: sums.get(c.id) ?? 0 }))
       .filter((x) => x.amount > 0)
       .sort((a, b) => b.amount - a.amount)
       .map((x) => ({
         ...x,
-        pct: Math.round((x.amount / Math.max(1, monthTotals.expense)) * 100),
+        pct: Math.round((x.amount / Math.max(1, total)) * 100),
         barPct: (x.amount / max) * 100,
       }));
-  }, [monthRecords, monthTotals]);
+  }
+
+  const categoryBreakdown = useMemo(
+    () => breakdownFor(monthRecords, "expense", monthTotals.expense),
+    [monthRecords, monthTotals],
+  );
+  const purchaseBreakdown = useMemo(
+    () => breakdownFor(monthRecords, "purchase", monthTotals.purchase),
+    [monthRecords, monthTotals],
+  );
 
   const groupedByDate = useMemo(() => {
     const groups: { date: string; items: KeihiRecord[] }[] = [];
@@ -190,7 +202,7 @@ export default function Home() {
       date: record.date,
       partner: record.partner,
       amount: String(record.amount),
-      category: record.category ?? DEFAULT_CATEGORY_ID,
+      category: record.category ?? defaultCategoryForKind(record.kind),
       memo: record.memo,
       thumbnail: record.thumbnail,
       kind: record.kind,
@@ -206,7 +218,7 @@ export default function Home() {
       date: isCurrentMonth ? todayStr() : `${viewMonth}-01`,
       partner: template.name,
       amount: String(template.amount),
-      category: template.category ?? DEFAULT_CATEGORY_ID,
+      category: template.category ?? defaultCategoryForKind(template.kind),
       memo: "",
       thumbnail: null,
       kind: template.kind,
@@ -295,7 +307,7 @@ export default function Home() {
                 date: draft.date,
                 partner: draft.partner.trim(),
                 amount,
-                category: draft.kind === "expense" ? draft.category : null,
+                category: draft.kind !== "revenue" ? draft.category : null,
                 memo: draft.memo.trim(),
                 kind: draft.kind,
               }
@@ -309,7 +321,7 @@ export default function Home() {
         date: draft.date,
         partner: draft.partner.trim(),
         amount,
-        category: draft.kind === "expense" ? draft.category : null,
+        category: draft.kind !== "revenue" ? draft.category : null,
         memo: draft.memo.trim(),
         thumbnail: draft.thumbnail,
         createdAt: Date.now(),
@@ -356,7 +368,7 @@ export default function Home() {
       id: t.id,
       name: t.name,
       amount: String(t.amount),
-      category: t.category ?? DEFAULT_CATEGORY_ID,
+      category: t.category ?? defaultCategoryForKind(t.kind),
       kind: t.kind,
     });
   }
@@ -372,7 +384,7 @@ export default function Home() {
                 ...t,
                 name: templateDraft.name.trim(),
                 amount,
-                category: templateDraft.kind === "expense" ? templateDraft.category : null,
+                category: templateDraft.kind !== "revenue" ? templateDraft.category : null,
                 kind: templateDraft.kind,
               }
             : t,
@@ -385,7 +397,7 @@ export default function Home() {
           id: crypto.randomUUID(),
           name: templateDraft.name.trim(),
           amount,
-          category: templateDraft.kind === "expense" ? templateDraft.category : null,
+          category: templateDraft.kind !== "revenue" ? templateDraft.category : null,
           kind: templateDraft.kind,
         },
       ]);
@@ -605,6 +617,32 @@ export default function Home() {
         </section>
       )}
 
+      {purchaseBreakdown.length > 0 && (
+        <section className="bg-card rounded-2xl shadow-sm p-5 mb-4">
+          <p className="text-sm font-semibold text-muted mb-3">仕入の科目別内訳</p>
+          <div className="flex flex-col gap-2.5">
+            {purchaseBreakdown.map(({ category, amount, pct, barPct }) => (
+              <div key={category.id} className="flex items-center gap-2 text-sm">
+                <span className="w-6 text-center">{category.emoji}</span>
+                <span className="w-24 shrink-0 truncate">{category.label}</span>
+                <div className="flex-1 h-2.5 rounded-full bg-black/5 overflow-hidden">
+                  <div
+                    className="h-full rounded-full"
+                    style={{ width: `${barPct}%`, backgroundColor: category.color }}
+                  />
+                </div>
+                <span className="w-20 shrink-0 text-right tabular-nums text-muted">
+                  {formatYen(amount)}
+                </span>
+                <span className="w-9 shrink-0 text-right tabular-nums text-xs text-muted">
+                  {pct}%
+                </span>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
       <section className="bg-card rounded-2xl shadow-sm p-5 mb-4">
         <div className="flex items-center justify-between mb-3">
           <p className="text-sm font-semibold text-muted">よく使う項目</p>
@@ -620,7 +658,7 @@ export default function Home() {
           <div className="flex flex-col gap-2">
             {templates.map((t) => {
               const kindMeta = ENTRY_KINDS.find((k) => k.id === t.kind)!;
-              const cat = t.kind === "expense" ? getCategory(t.category) : null;
+              const cat = getCategoryForKind(t.kind, t.category);
               const addedRecord = monthRecords.find((r) => r.templateId === t.id);
               return (
                 <div key={t.id} className="flex items-center gap-2 text-sm">
@@ -710,7 +748,7 @@ export default function Home() {
             <div className="bg-card rounded-2xl shadow-sm divide-y divide-black/5 overflow-hidden">
               {group.items.map((r) => {
                 const kindMeta = ENTRY_KINDS.find((k) => k.id === r.kind)!;
-                const cat = r.kind === "expense" ? getCategory(r.category) : null;
+                const cat = getCategoryForKind(r.kind, r.category);
                 return (
                   <button
                     key={r.id}
@@ -850,16 +888,18 @@ function EntryModal({
 }) {
   const amountValid = draft.amount !== "" && Number.isFinite(Number(draft.amount)) && Number(draft.amount) >= 0;
   const splits = draft.splits ?? [];
+  const categoryOptions = categoriesForKind(draft.kind);
 
   const [showSplitForm, setShowSplitForm] = useState(false);
   const [splitAmount, setSplitAmount] = useState("");
-  const [splitCategory, setSplitCategory] = useState(
-    CATEGORIES.find((c) => c.id !== draft.category)?.id ?? CATEGORIES[0].id,
-  );
+  const [splitCategory, setSplitCategory] = useState("");
+  const effectiveSplitCategory = categoryOptions.some((c) => c.id === splitCategory)
+    ? splitCategory
+    : (categoryOptions.find((c) => c.id !== draft.category)?.id ?? categoryOptions[0]?.id ?? "");
 
   function switchKind(kind: EntryKind) {
     if (kind === draft.kind) return;
-    onChange({ ...draft, kind, splits: [] });
+    onChange({ ...draft, kind, category: defaultCategoryForKind(kind), splits: [] });
     setShowSplitForm(false);
   }
 
@@ -870,7 +910,7 @@ function EntryModal({
     onChange({
       ...draft,
       amount: String(current - splitAmt),
-      splits: [...splits, { category: splitCategory, amount: splitAmount }],
+      splits: [...splits, { category: effectiveSplitCategory, amount: splitAmount }],
     });
     setSplitAmount("");
     setShowSplitForm(false);
@@ -944,11 +984,11 @@ function EntryModal({
             </div>
           </div>
 
-          {draft.kind === "expense" && (
+          {draft.kind !== "revenue" && (
             <div>
               <label className="block text-xs text-muted mb-1">科目</label>
               <div className="grid grid-cols-3 gap-2">
-                {CATEGORIES.map((c) => (
+                {categoryOptions.map((c) => (
                   <button
                     key={c.id}
                     type="button"
@@ -967,10 +1007,11 @@ function EntryModal({
             </div>
           )}
 
-          {draft.kind === "expense" && splits.length > 0 && (
+          {draft.kind !== "revenue" && splits.length > 0 && (
             <div className="flex flex-col gap-1.5">
               {splits.map((s, i) => {
-                const cat = getCategory(s.category);
+                const cat = getCategoryForKind(draft.kind, s.category);
+                if (!cat) return null;
                 return (
                   <div
                     key={i}
@@ -993,7 +1034,7 @@ function EntryModal({
             </div>
           )}
 
-          {draft.kind === "expense" &&
+          {draft.kind !== "revenue" &&
             (showSplitForm ? (
               <div className="bg-white rounded-xl p-3 shadow-sm flex flex-col gap-2">
                 <p className="text-xs text-muted">別の科目に分ける金額</p>
@@ -1009,11 +1050,11 @@ function EntryModal({
                   />
                 </div>
                 <select
-                  value={splitCategory}
+                  value={effectiveSplitCategory}
                   onChange={(e) => setSplitCategory(e.target.value)}
                   className="text-sm rounded-lg border border-black/10 px-2 py-1.5 bg-white"
                 >
-                  {CATEGORIES.map((c) => (
+                  {categoryOptions.map((c) => (
                     <option key={c.id} value={c.id}>
                       {c.emoji} {c.label}
                     </option>
@@ -1139,7 +1180,7 @@ function TemplateManagerModal({
           <div className="bg-card rounded-2xl shadow-sm divide-y divide-black/5 overflow-hidden mb-4">
             {templates.map((t) => {
               const kindMeta = ENTRY_KINDS.find((k) => k.id === t.kind)!;
-              const cat = t.kind === "expense" ? getCategory(t.category) : null;
+              const cat = getCategoryForKind(t.kind, t.category);
               return (
                 <div key={t.id} className="flex items-center gap-2 px-3 py-2.5">
                   <button
@@ -1210,11 +1251,11 @@ function TemplateManagerModal({
               />
             </div>
           </div>
-          {draft.kind === "expense" && (
+          {draft.kind !== "revenue" && (
             <div>
               <label className="block text-xs text-muted mb-1">科目</label>
               <div className="grid grid-cols-3 gap-2">
-                {CATEGORIES.map((c) => (
+                {categoriesForKind(draft.kind).map((c) => (
                   <button
                     key={c.id}
                     type="button"
@@ -1265,6 +1306,7 @@ function AnnualReportModal({
   onClose: () => void;
 }) {
   const nonZeroCategories = summary.expenseByCategory.filter((c) => c.amount > 0);
+  const nonZeroPurchaseCategories = summary.purchaseByCategory.filter((c) => c.amount > 0);
 
   return (
     <div className="fixed inset-0 z-20 bg-black/40 flex items-end sm:items-center justify-center">
@@ -1319,6 +1361,21 @@ function AnnualReportModal({
             </span>
           </div>
         </div>
+
+        {nonZeroPurchaseCategories.length > 0 && (
+          <div className="mb-4">
+            <p className="text-sm font-semibold text-muted mb-2">仕入の科目別内訳</p>
+            <div className="bg-card rounded-2xl shadow-sm divide-y divide-black/5 overflow-hidden">
+              {nonZeroPurchaseCategories.map(({ category, amount }) => (
+                <div key={category.id} className="flex items-center gap-2 px-4 py-2.5 text-sm">
+                  <span className="w-6 text-center">{category.emoji}</span>
+                  <span className="flex-1 min-w-0 truncate">{category.label}</span>
+                  <span className="tabular-nums text-muted">{formatYen(amount)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {nonZeroCategories.length > 0 && (
           <div className="mb-4">
