@@ -6,6 +6,30 @@ import { CATEGORIES } from "@/lib/categories";
 // timeout, which is otherwise too short for image analysis.
 export const maxDuration = 60;
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// The model occasionally returns 503 ("currently experiencing high
+// demand"), which Google describes as usually transient, so a couple of
+// short retries resolve most of them without the user ever seeing an error.
+async function generateWithRetry(
+  ai: GoogleGenAI,
+  params: Parameters<GoogleGenAI["models"]["generateContent"]>[0],
+  maxAttempts = 3,
+) {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await ai.models.generateContent(params);
+    } catch (error) {
+      const isRetryable = error instanceof ApiError && (error.status === 503 || error.status === 500);
+      if (!isRetryable || attempt === maxAttempts) throw error;
+      await sleep(attempt * 1500);
+    }
+  }
+  throw new Error("unreachable");
+}
+
 export async function POST(request: Request) {
   let body: unknown;
   try {
@@ -33,7 +57,7 @@ export async function POST(request: Request) {
 
   try {
     const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-    const response = await ai.models.generateContent({
+    const response = await generateWithRetry(ai, {
       model: process.env.GEMINI_MODEL || "gemini-flash-latest",
       contents: [
         {
@@ -124,6 +148,12 @@ PayPayなど決済アプリの「支払い完了」画面のスクリーンシ�
         return NextResponse.json(
           { error: "アクセスが集中しているか、無料枠の上限に達しました。手入力で保存するか、しばらく待ってからお試しください。" },
           { status: 429 },
+        );
+      }
+      if (error.status === 503 || error.status === 500) {
+        return NextResponse.json(
+          { error: "AIが混み合っています。少し時間をおいてからもう一度お試しください。" },
+          { status: 503 },
         );
       }
       return NextResponse.json(
