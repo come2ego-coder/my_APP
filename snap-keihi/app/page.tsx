@@ -136,6 +136,7 @@ export default function Home() {
   }
 
   const monthTotals = useMemo(() => totalsFor(monthRecords), [monthRecords]);
+  const allTimeTotals = useMemo(() => totalsFor(records), [records]);
 
   const prevMonthStats = useMemo(() => {
     const prev = shiftMonth(viewMonth, -1);
@@ -508,6 +509,7 @@ export default function Home() {
       </section>
 
       <section className="bg-card rounded-2xl shadow-sm p-5 mb-4 text-center">
+        <p className="text-xs text-muted">📅 月次決算</p>
         <p className="text-sm text-muted">今月の利益(差引金額)</p>
         <p
           className={`text-4xl font-bold mt-1 ${monthTotals.profit >= 0 ? "text-income" : "text-loss"}`}
@@ -549,6 +551,30 @@ export default function Home() {
           >
             🧾 確定申告用の年間集計
           </button>
+        </div>
+      </section>
+
+      <section className="bg-card rounded-2xl shadow-sm p-5 mb-4 text-center">
+        <p className="text-xs text-muted">📊 通算決算(全期間)</p>
+        <p className="text-sm text-muted">全期間の利益(差引金額)</p>
+        <p
+          className={`text-4xl font-bold mt-1 ${allTimeTotals.profit >= 0 ? "text-income" : "text-loss"}`}
+        >
+          {formatSigned(allTimeTotals.profit)}
+        </p>
+        <div className="flex justify-center gap-6 mt-4 pt-4 border-t border-black/5">
+          <div>
+            <p className="text-xs text-muted">売上</p>
+            <p className="text-lg font-semibold text-income tabular-nums">{formatYen(allTimeTotals.revenue)}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted">仕入</p>
+            <p className="text-lg font-semibold tabular-nums">{formatYen(allTimeTotals.purchase)}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted">経費</p>
+            <p className="text-lg font-semibold tabular-nums">{formatYen(allTimeTotals.expense)}</p>
+          </div>
         </div>
       </section>
 
