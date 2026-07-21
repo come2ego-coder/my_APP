@@ -22,3 +22,29 @@ export const DEFAULT_CATEGORY_ID = "other";
 export function getCategory(id: string | undefined | null): Category {
   return CATEGORIES.find((c) => c.id === id) ?? CATEGORIES[CATEGORIES.length - 1];
 }
+
+export const INCOME_CATEGORIES: Category[] = [
+  { id: "salary", label: "給与", emoji: "💼", color: "#4f8f7d" },
+  { id: "bonus", label: "臨時収入", emoji: "🎁", color: "#c98a3e" },
+  { id: "other_income", label: "その他", emoji: "💰", color: "#5cae8f" },
+];
+
+export const DEFAULT_INCOME_CATEGORY_ID = "salary";
+
+export function getIncomeCategory(id: string | undefined | null): Category {
+  return INCOME_CATEGORIES.find((c) => c.id === id) ?? INCOME_CATEGORIES[0];
+}
+
+export type EntryKind = "expense" | "income";
+
+export function categoriesForKind(kind: EntryKind): Category[] {
+  return kind === "income" ? INCOME_CATEGORIES : CATEGORIES;
+}
+
+export function defaultCategoryForKind(kind: EntryKind): string {
+  return kind === "income" ? DEFAULT_INCOME_CATEGORY_ID : DEFAULT_CATEGORY_ID;
+}
+
+export function getCategoryForKind(kind: EntryKind, id: string | undefined | null): Category {
+  return kind === "income" ? getIncomeCategory(id) : getCategory(id);
+}

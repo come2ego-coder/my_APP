@@ -1,7 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CATEGORIES, DEFAULT_CATEGORY_ID, getCategory } from "@/lib/categories";
+import {
+  CATEGORIES,
+  categoriesForKind,
+  defaultCategoryForKind,
+  type EntryKind,
+  getCategoryForKind,
+} from "@/lib/categories";
 import { dataUrlToBase64, resizeImage } from "@/lib/image";
 import {
   type Record as KakeiboRecord,
@@ -10,6 +16,7 @@ import {
   saveRecords,
   todayStr,
 } from "@/lib/records";
+import { type RecurringTemplate, loadTemplates, saveTemplates } from "@/lib/templates";
 
 type Draft = {
   id: string | null;
@@ -19,18 +26,34 @@ type Draft = {
   category: string;
   memo: string;
   thumbnail: string | null;
+  kind: EntryKind;
+  templateId?: string;
+  kindLocked?: boolean;
 };
 
-function emptyDraft(): Draft {
+function emptyDraft(kind: EntryKind = "expense"): Draft {
   return {
     id: null,
     date: todayStr(),
     store: "",
     amount: "",
-    category: DEFAULT_CATEGORY_ID,
+    category: defaultCategoryForKind(kind),
     memo: "",
     thumbnail: null,
+    kind,
   };
+}
+
+type TemplateDraft = {
+  id: string | null;
+  name: string;
+  amount: string;
+  category: string;
+  kind: EntryKind;
+};
+
+function emptyTemplateDraft(kind: EntryKind = "expense"): TemplateDraft {
+  return { id: null, name: "", amount: "", category: defaultCategoryForKind(kind), kind };
 }
 
 function formatYen(n: number): string {
@@ -50,22 +73,30 @@ function shiftMonth(ym: string, delta: number): string {
 
 export default function Home() {
   const [records, setRecords] = useState<KakeiboRecord[]>([]);
+  const [templates, setTemplates] = useState<RecurringTemplate[]>([]);
   const [hydrated, setHydrated] = useState(false);
   const [viewMonth, setViewMonth] = useState(() => todayStr().slice(0, 7));
   const [draft, setDraft] = useState<Draft | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [analyzeNotice, setAnalyzeNotice] = useState<string | null>(null);
+  const [showTemplateManager, setShowTemplateManager] = useState(false);
+  const [templateDraft, setTemplateDraft] = useState<TemplateDraft>(emptyTemplateDraft());
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- hydrate from localStorage after mount
     setRecords(loadRecords());
+    setTemplates(loadTemplates());
     setHydrated(true);
   }, []);
 
   useEffect(() => {
     if (hydrated) saveRecords(records);
   }, [records, hydrated]);
+
+  useEffect(() => {
+    if (hydrated) saveTemplates(templates);
+  }, [templates, hydrated]);
 
   const currentMonth = todayStr().slice(0, 7);
 
@@ -77,27 +108,39 @@ export default function Home() {
     [records, viewMonth],
   );
 
-  const monthTotal = useMemo(
-    () => monthRecords.reduce((sum, r) => sum + r.amount, 0),
+  const monthExpenseTotal = useMemo(
+    () => monthRecords.filter((r) => r.kind === "expense").reduce((sum, r) => sum + r.amount, 0),
     [monthRecords],
   );
+  const monthIncomeTotal = useMemo(
+    () => monthRecords.filter((r) => r.kind === "income").reduce((sum, r) => sum + r.amount, 0),
+    [monthRecords],
+  );
+  const monthBalance = monthIncomeTotal - monthExpenseTotal;
 
-  const prevMonthTotal = useMemo(() => {
+  const prevMonthExpenseTotal = useMemo(() => {
     const prev = shiftMonth(viewMonth, -1);
-    return records.filter((r) => monthKey(r.date) === prev).reduce((sum, r) => sum + r.amount, 0);
+    return records
+      .filter((r) => monthKey(r.date) === prev && r.kind === "expense")
+      .reduce((sum, r) => sum + r.amount, 0);
   }, [records, viewMonth]);
 
   const categoryBreakdown = useMemo(() => {
     const sums = new Map<string, number>();
     for (const r of monthRecords) {
+      if (r.kind !== "expense") continue;
       sums.set(r.category, (sums.get(r.category) ?? 0) + r.amount);
     }
     const max = Math.max(1, ...sums.values());
     return CATEGORIES.map((c) => ({ category: c, amount: sums.get(c.id) ?? 0 }))
       .filter((x) => x.amount > 0)
       .sort((a, b) => b.amount - a.amount)
-      .map((x) => ({ ...x, pct: Math.round((x.amount / Math.max(1, monthTotal)) * 100), barPct: (x.amount / max) * 100 }));
-  }, [monthRecords, monthTotal]);
+      .map((x) => ({
+        ...x,
+        pct: Math.round((x.amount / Math.max(1, monthExpenseTotal)) * 100),
+        barPct: (x.amount / max) * 100,
+      }));
+  }, [monthRecords, monthExpenseTotal]);
 
   const groupedByDate = useMemo(() => {
     const groups: { date: string; items: KakeiboRecord[] }[] = [];
@@ -111,7 +154,7 @@ export default function Home() {
 
   function openManualEntry() {
     setAnalyzeNotice(null);
-    setDraft(emptyDraft());
+    setDraft(emptyDraft("expense"));
   }
 
   function openEdit(record: KakeiboRecord) {
@@ -124,6 +167,24 @@ export default function Home() {
       category: record.category,
       memo: record.memo,
       thumbnail: record.thumbnail,
+      kind: record.kind,
+      templateId: record.templateId,
+    });
+  }
+
+  function openFromTemplate(template: RecurringTemplate) {
+    setAnalyzeNotice(null);
+    const isCurrentMonth = viewMonth === currentMonth;
+    setDraft({
+      id: null,
+      date: isCurrentMonth ? todayStr() : `${viewMonth}-01`,
+      store: template.name,
+      amount: String(template.amount),
+      category: template.category,
+      memo: "",
+      thumbnail: null,
+      kind: template.kind,
+      templateId: template.id,
     });
   }
 
@@ -143,7 +204,7 @@ export default function Home() {
         resizeImage(file, 160, 0.5),
       ]);
 
-      setDraft({ ...emptyDraft(), thumbnail });
+      setDraft({ ...emptyDraft("expense"), thumbnail, kindLocked: true });
       setAnalyzing(true);
 
       const { mimeType, data } = dataUrlToBase64(analysisImage);
@@ -166,7 +227,7 @@ export default function Home() {
               store: result.store || "",
               date: result.date || cur.date,
               amount: result.amount != null ? String(result.amount) : "",
-              category: result.category || DEFAULT_CATEGORY_ID,
+              category: result.category || defaultCategoryForKind("expense"),
               memo: result.memo || "",
             }
           : cur,
@@ -198,6 +259,7 @@ export default function Home() {
                 amount,
                 category: draft.category,
                 memo: draft.memo.trim(),
+                kind: draft.kind,
               }
             : r,
         ),
@@ -212,6 +274,8 @@ export default function Home() {
         memo: draft.memo.trim(),
         thumbnail: draft.thumbnail,
         createdAt: Date.now(),
+        kind: draft.kind,
+        templateId: draft.templateId,
       };
       setRecords((prev) => [...prev, newRecord]);
       setViewMonth(monthKey(draft.date));
@@ -225,7 +289,47 @@ export default function Home() {
     setDraft(null);
   }
 
-  const diff = monthTotal - prevMonthTotal;
+  function openTemplateManager() {
+    setTemplateDraft(emptyTemplateDraft());
+    setShowTemplateManager(true);
+  }
+
+  function selectTemplateForEdit(t: RecurringTemplate) {
+    setTemplateDraft({ id: t.id, name: t.name, amount: String(t.amount), category: t.category, kind: t.kind });
+  }
+
+  function saveTemplateDraft() {
+    const amount = Number(templateDraft.amount);
+    if (!templateDraft.name.trim() || !Number.isFinite(amount) || amount <= 0) return;
+    if (templateDraft.id) {
+      setTemplates((prev) =>
+        prev.map((t) =>
+          t.id === templateDraft.id
+            ? { ...t, name: templateDraft.name.trim(), amount, category: templateDraft.category, kind: templateDraft.kind }
+            : t,
+        ),
+      );
+    } else {
+      setTemplates((prev) => [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          name: templateDraft.name.trim(),
+          amount,
+          category: templateDraft.category,
+          kind: templateDraft.kind,
+        },
+      ]);
+    }
+    setTemplateDraft(emptyTemplateDraft());
+  }
+
+  function deleteTemplate(id: string) {
+    setTemplates((prev) => prev.filter((t) => t.id !== id));
+    if (templateDraft.id === id) setTemplateDraft(emptyTemplateDraft());
+  }
+
+  const diff = monthExpenseTotal - prevMonthExpenseTotal;
 
   return (
     <main className="flex-1 w-full max-w-lg mx-auto px-4 pb-28 pt-6 sm:pt-10">
@@ -258,14 +362,27 @@ export default function Home() {
       </div>
 
       <section className="bg-card rounded-2xl shadow-sm p-5 mb-4 text-center">
-        <p className="text-sm text-muted">今月の合計</p>
-        <p className="text-4xl font-bold text-accent-deep mt-1">{formatYen(monthTotal)}</p>
-        {prevMonthTotal > 0 && (
+        <p className="text-sm text-muted">今月の支出</p>
+        <p className="text-4xl font-bold text-accent-deep mt-1">{formatYen(monthExpenseTotal)}</p>
+        {prevMonthExpenseTotal > 0 && (
           <p className="text-xs text-muted mt-1">
             先月比 {diff >= 0 ? "+" : ""}
             {formatYen(diff)}
           </p>
         )}
+        <div className="flex justify-center gap-8 mt-4 pt-4 border-t border-black/5">
+          <div>
+            <p className="text-xs text-muted">収入</p>
+            <p className="text-lg font-semibold text-income tabular-nums">{formatYen(monthIncomeTotal)}</p>
+          </div>
+          <div>
+            <p className="text-xs text-muted">収支</p>
+            <p className={`text-lg font-semibold tabular-nums ${monthBalance >= 0 ? "text-income" : "text-red-500"}`}>
+              {monthBalance >= 0 ? "+" : ""}
+              {formatYen(monthBalance)}
+            </p>
+          </div>
+        </div>
       </section>
 
       {categoryBreakdown.length > 0 && (
@@ -294,6 +411,56 @@ export default function Home() {
         </section>
       )}
 
+      <section className="bg-card rounded-2xl shadow-sm p-5 mb-4">
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-sm font-semibold text-muted">定期・予定</p>
+          <button type="button" onClick={openTemplateManager} className="text-xs text-accent-deep underline">
+            管理
+          </button>
+        </div>
+        {templates.length === 0 ? (
+          <p className="text-xs text-muted">
+            家賃やサブスク、給与などの固定項目を登録しておくと、毎月ワンタップで記録できます。
+          </p>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {templates.map((t) => {
+              const cat = getCategoryForKind(t.kind, t.category);
+              const paidRecord = monthRecords.find((r) => r.templateId === t.id);
+              return (
+                <div key={t.id} className="flex items-center gap-2 text-sm">
+                  <span className="w-6 text-center">{cat.emoji}</span>
+                  <span className="flex-1 min-w-0 truncate">{t.name}</span>
+                  <span
+                    className={`shrink-0 tabular-nums ${t.kind === "income" ? "text-income" : "text-muted"}`}
+                  >
+                    {t.kind === "income" ? "+" : ""}
+                    {formatYen(t.amount)}
+                  </span>
+                  {paidRecord ? (
+                    <button
+                      type="button"
+                      onClick={() => openEdit(paidRecord)}
+                      className="shrink-0 text-xs px-2.5 py-1 rounded-full bg-income/10 text-income font-medium"
+                    >
+                      ✓ 記録済み
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => openFromTemplate(t)}
+                      className="shrink-0 text-xs px-2.5 py-1 rounded-full bg-accent/10 text-accent-deep font-medium"
+                    >
+                      追加する
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
       <section className="flex flex-col gap-4">
         {groupedByDate.length === 0 && hydrated && (
           <div className="text-center py-16 text-muted">
@@ -314,7 +481,7 @@ export default function Home() {
             </p>
             <div className="bg-card rounded-2xl shadow-sm divide-y divide-black/5 overflow-hidden">
               {group.items.map((r) => {
-                const cat = getCategory(r.category);
+                const cat = getCategoryForKind(r.kind, r.category);
                 return (
                   <button
                     key={r.id}
@@ -343,7 +510,12 @@ export default function Home() {
                         {r.memo ? ` ・ ${r.memo}` : ""}
                       </span>
                     </span>
-                    <span className="shrink-0 font-semibold tabular-nums">{formatYen(r.amount)}</span>
+                    <span
+                      className={`shrink-0 font-semibold tabular-nums ${r.kind === "income" ? "text-income" : ""}`}
+                    >
+                      {r.kind === "income" ? "+" : ""}
+                      {formatYen(r.amount)}
+                    </span>
                   </button>
                 );
               })}
@@ -392,6 +564,19 @@ export default function Home() {
           onClose={() => setDraft(null)}
         />
       )}
+
+      {showTemplateManager && (
+        <TemplateManagerModal
+          templates={templates}
+          draft={templateDraft}
+          onChangeDraft={setTemplateDraft}
+          onSave={saveTemplateDraft}
+          onSelect={selectTemplateForEdit}
+          onDelete={deleteTemplate}
+          onNew={(kind) => setTemplateDraft(emptyTemplateDraft(kind))}
+          onClose={() => setShowTemplateManager(false)}
+        />
+      )}
     </main>
   );
 }
@@ -414,6 +599,12 @@ function EntryModal({
   onClose: () => void;
 }) {
   const amountValid = draft.amount !== "" && Number.isFinite(Number(draft.amount)) && Number(draft.amount) >= 0;
+  const categoryOptions = categoriesForKind(draft.kind);
+
+  function switchKind(kind: EntryKind) {
+    if (kind === draft.kind) return;
+    onChange({ ...draft, kind, category: defaultCategoryForKind(kind) });
+  }
 
   return (
     <div className="fixed inset-0 z-10 bg-black/40 flex items-end sm:items-center justify-center">
@@ -424,6 +615,33 @@ function EntryModal({
             ×
           </button>
         </div>
+
+        {!draft.kindLocked && (
+          <div className="grid grid-cols-2 gap-2 mb-4">
+            <button
+              type="button"
+              onClick={() => switchKind("expense")}
+              className={`py-2 rounded-xl text-sm font-semibold border transition-colors ${
+                draft.kind === "expense"
+                  ? "border-accent bg-accent/10 text-accent-deep"
+                  : "border-transparent bg-white text-foreground/70"
+              }`}
+            >
+              支出
+            </button>
+            <button
+              type="button"
+              onClick={() => switchKind("income")}
+              className={`py-2 rounded-xl text-sm font-semibold border transition-colors ${
+                draft.kind === "income"
+                  ? "border-income bg-income/10 text-income"
+                  : "border-transparent bg-white text-foreground/70"
+              }`}
+            >
+              収入
+            </button>
+          </div>
+        )}
 
         {draft.thumbnail && (
           <div className="flex justify-center mb-3">
@@ -460,7 +678,7 @@ function EntryModal({
           <div>
             <label className="block text-xs text-muted mb-1">カテゴリ</label>
             <div className="grid grid-cols-3 gap-2">
-              {CATEGORIES.map((c) => (
+              {categoryOptions.map((c) => (
                 <button
                   key={c.id}
                   type="button"
@@ -489,7 +707,7 @@ function EntryModal({
               />
             </div>
             <div>
-              <label className="block text-xs text-muted mb-1">店名</label>
+              <label className="block text-xs text-muted mb-1">{draft.kind === "income" ? "内容" : "店名"}</label>
               <input
                 type="text"
                 value={draft.store}
@@ -531,6 +749,153 @@ function EntryModal({
             保存する
           </button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function TemplateManagerModal({
+  templates,
+  draft,
+  onChangeDraft,
+  onSave,
+  onSelect,
+  onDelete,
+  onNew,
+  onClose,
+}: {
+  templates: RecurringTemplate[];
+  draft: TemplateDraft;
+  onChangeDraft: (d: TemplateDraft) => void;
+  onSave: () => void;
+  onSelect: (t: RecurringTemplate) => void;
+  onDelete: (id: string) => void;
+  onNew: (kind: EntryKind) => void;
+  onClose: () => void;
+}) {
+  const valid = draft.name.trim() !== "" && Number.isFinite(Number(draft.amount)) && Number(draft.amount) > 0;
+  const categoryOptions = categoriesForKind(draft.kind);
+
+  return (
+    <div className="fixed inset-0 z-20 bg-black/40 flex items-end sm:items-center justify-center">
+      <div className="bg-background w-full sm:max-w-md sm:rounded-3xl rounded-t-3xl p-5 max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-bold text-lg">定期・予定を管理</h2>
+          <button type="button" onClick={onClose} className="text-muted text-2xl leading-none px-2">
+            ×
+          </button>
+        </div>
+
+        {templates.length > 0 && (
+          <div className="bg-card rounded-2xl shadow-sm divide-y divide-black/5 overflow-hidden mb-4">
+            {templates.map((t) => {
+              const cat = getCategoryForKind(t.kind, t.category);
+              return (
+                <div key={t.id} className="flex items-center gap-2 px-3 py-2.5">
+                  <button
+                    type="button"
+                    onClick={() => onSelect(t)}
+                    className="flex-1 flex items-center gap-2 min-w-0 text-left"
+                  >
+                    <span className="w-6 text-center">{cat.emoji}</span>
+                    <span className="flex-1 min-w-0 truncate text-sm">{t.name}</span>
+                    <span className={`text-sm tabular-nums ${t.kind === "income" ? "text-income" : ""}`}>
+                      {formatYen(t.amount)}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onDelete(t.id)}
+                    className="text-red-500 text-xs px-2 py-1 shrink-0"
+                  >
+                    削除
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        <div className="grid grid-cols-2 gap-2 mb-3">
+          <button
+            type="button"
+            onClick={() => onNew("expense")}
+            className={`py-2 rounded-xl text-sm font-semibold border transition-colors ${
+              draft.kind === "expense"
+                ? "border-accent bg-accent/10 text-accent-deep"
+                : "border-transparent bg-white text-foreground/70"
+            }`}
+          >
+            固定の支出
+          </button>
+          <button
+            type="button"
+            onClick={() => onNew("income")}
+            className={`py-2 rounded-xl text-sm font-semibold border transition-colors ${
+              draft.kind === "income"
+                ? "border-income bg-income/10 text-income"
+                : "border-transparent bg-white text-foreground/70"
+            }`}
+          >
+            固定の収入
+          </button>
+        </div>
+
+        <div className="flex flex-col gap-3">
+          <div>
+            <label className="block text-xs text-muted mb-1">名前</label>
+            <input
+              type="text"
+              value={draft.name}
+              onChange={(e) => onChangeDraft({ ...draft, name: e.target.value })}
+              placeholder={draft.kind === "income" ? "例: 給与" : "例: 家賃"}
+              className="w-full bg-white rounded-xl px-3 py-2.5 shadow-sm text-sm outline-none"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-muted mb-1">金額</label>
+            <div className="flex items-center gap-1 bg-white rounded-xl px-3 py-2.5 shadow-sm">
+              <span className="text-lg text-muted">¥</span>
+              <input
+                type="number"
+                inputMode="numeric"
+                value={draft.amount}
+                onChange={(e) => onChangeDraft({ ...draft, amount: e.target.value })}
+                placeholder="0"
+                className="flex-1 text-lg font-bold outline-none min-w-0"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs text-muted mb-1">カテゴリ</label>
+            <div className="grid grid-cols-3 gap-2">
+              {categoryOptions.map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => onChangeDraft({ ...draft, category: c.id })}
+                  className={`rounded-xl px-2 py-2 text-xs flex flex-col items-center gap-0.5 border transition-colors ${
+                    draft.category === c.id
+                      ? "border-accent bg-accent/10 text-accent-deep"
+                      : "border-transparent bg-white text-foreground/80"
+                  }`}
+                >
+                  <span className="text-lg">{c.emoji}</span>
+                  {c.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={onSave}
+          disabled={!valid}
+          className="w-full mt-5 py-3 rounded-xl bg-accent text-white font-bold shadow-sm disabled:opacity-40"
+        >
+          {draft.id ? "更新する" : "追加する"}
+        </button>
       </div>
     </div>
   );

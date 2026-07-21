@@ -7,6 +7,7 @@
   --accent: #e8895c;
   --accent-deep: #d4703f;
   --muted: #8a8378;
+  --income: #3f8f6a;
 }
 
 @theme inline {
@@ -16,6 +17,7 @@
   --color-accent: var(--accent);
   --color-accent-deep: var(--accent-deep);
   --color-muted: var(--muted);
+  --color-income: var(--income);
   --font-sans: var(--font-sans);
 }
 

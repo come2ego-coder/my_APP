@@ -7,6 +7,8 @@ export type Record = {
   memo: string;
   thumbnail: string | null; // small data URL, for the list view only
   createdAt: number;
+  kind: "expense" | "income";
+  templateId?: string; // set if this entry was created from a recurring template
 };
 
 const STORAGE_KEY = "snap-kakeibo:records";
@@ -18,7 +20,8 @@ export function loadRecords(): Record[] {
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-    return parsed;
+    // Older records saved before income tracking existed have no `kind`.
+    return parsed.map((r: Record) => ({ ...r, kind: r.kind ?? "expense" }));
   } catch {
     return [];
   }
