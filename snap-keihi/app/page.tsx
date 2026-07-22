@@ -415,6 +415,11 @@ export default function Home() {
     Number.isFinite(Number(quickRevenueAmount)) &&
     Number(quickRevenueAmount) > 0;
 
+  const quickRevenueDayStats = useMemo(() => {
+    const dayRevenue = records.filter((r) => r.date === quickRevenueDate && r.kind === "revenue");
+    return { count: dayRevenue.length, total: dayRevenue.reduce((sum, r) => sum + r.amount, 0) };
+  }, [records, quickRevenueDate]);
+
   function handleQuickAddRevenue() {
     if (!quickRevenueValid) return;
     const newRecord: KeihiRecord = {
@@ -519,6 +524,12 @@ export default function Home() {
         >
           この売上を記録する
         </button>
+        {quickRevenueDayStats.count > 0 && (
+          <p className="text-xs text-muted text-center mt-2">
+            {quickRevenueDate.slice(5).replace("-", "/")}の売上合計({quickRevenueDayStats.count}件):{" "}
+            <span className="font-semibold text-income">{formatYen(quickRevenueDayStats.total)}</span>
+          </p>
+        )}
       </section>
 
       <section className="bg-card rounded-2xl shadow-sm p-5 mb-4 text-center">
@@ -863,6 +874,8 @@ export default function Home() {
           onChange={setCalcExpr}
           onApply={applyCalculator}
           onClose={() => setShowCalculator(false)}
+          dayLabel={quickRevenueDate.slice(5).replace("-", "/")}
+          dayStats={quickRevenueDayStats}
         />
       )}
     </main>
@@ -1425,11 +1438,15 @@ function CalculatorModal({
   onChange,
   onApply,
   onClose,
+  dayLabel,
+  dayStats,
 }: {
   expr: string;
   onChange: (expr: string) => void;
   onApply: () => void;
   onClose: () => void;
+  dayLabel: string;
+  dayStats: { count: number; total: number };
 }) {
   const preview = evaluateExpression(expr);
 
@@ -1446,6 +1463,18 @@ function CalculatorModal({
             ×
           </button>
         </div>
+
+        {dayStats.count > 0 && (
+          <p className="text-xs text-muted text-center mb-3">
+            {dayLabel}の記録済み売上({dayStats.count}件): {formatYen(dayStats.total)}
+            {preview != null && (
+              <>
+                {" "}→ この入力後:{" "}
+                <span className="font-semibold text-income">{formatYen(dayStats.total + preview)}</span>
+              </>
+            )}
+          </p>
+        )}
 
         <div className="bg-white rounded-xl shadow-sm p-4 mb-3">
           <div className="flex items-start justify-between gap-2">
