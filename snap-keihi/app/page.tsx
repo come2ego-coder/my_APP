@@ -239,7 +239,7 @@ export default function Home() {
     try {
       const [analysisImage, thumbnail] = await Promise.all([
         resizeImage(file, 1024, 0.7),
-        resizeImage(file, 160, 0.5),
+        resizeImage(file, 800, 0.6),
       ]);
 
       setDraft({ ...emptyDraft("expense"), thumbnail });
@@ -906,6 +906,7 @@ function EntryModal({
   const [showSplitForm, setShowSplitForm] = useState(false);
   const [splitAmount, setSplitAmount] = useState("");
   const [splitCategory, setSplitCategory] = useState("");
+  const [zoomedImage, setZoomedImage] = useState<string | null>(null);
   const effectiveSplitCategory = categoryOptions.some((c) => c.id === splitCategory)
     ? splitCategory
     : (categoryOptions.find((c) => c.id !== draft.category)?.id ?? categoryOptions[0]?.id ?? "");
@@ -937,6 +938,7 @@ function EntryModal({
   }
 
   return (
+    <>
     <div className="fixed inset-0 z-10 bg-black/40 flex items-end sm:items-center justify-center">
       <div className="bg-background w-full sm:max-w-md sm:rounded-3xl rounded-t-3xl p-5 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
@@ -967,8 +969,10 @@ function EntryModal({
 
         {draft.thumbnail && (
           <div className="flex justify-center mb-3">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={draft.thumbnail} alt="" className="h-24 rounded-xl object-cover shadow-sm" />
+            <button type="button" onClick={() => setZoomedImage(draft.thumbnail)} aria-label="レシートを拡大表示">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={draft.thumbnail} alt="" className="h-24 rounded-xl object-cover shadow-sm" />
+            </button>
           </div>
         )}
 
@@ -1155,6 +1159,19 @@ function EntryModal({
         </div>
       </div>
     </div>
+
+    {zoomedImage && (
+      <button
+        type="button"
+        onClick={() => setZoomedImage(null)}
+        aria-label="拡大表示を閉じる"
+        className="fixed inset-0 z-40 bg-black/90 flex items-center justify-center p-4"
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={zoomedImage} alt="" className="max-w-full max-h-full object-contain rounded-lg" />
+      </button>
+    )}
+    </>
   );
 }
 

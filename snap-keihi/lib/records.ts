@@ -7,7 +7,7 @@ export type Record = {
   amount: number;
   category: string | null; // meaningful when kind is "expense" or "purchase"
   memo: string;
-  thumbnail: string | null; // small data URL, for the list view only
+  thumbnail: string | null; // compressed data URL; used for the list icon and the zoomed-in view
   createdAt: number;
   kind: EntryKind;
   templateId?: string; // set if this entry was created from a recurring template
