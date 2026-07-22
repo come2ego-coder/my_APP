@@ -7,6 +7,7 @@ export type Category = {
 
 export const CATEGORIES: Category[] = [
   { id: "food", label: "食費", emoji: "🍙", color: "#e8895c" },
+  { id: "dining_out", label: "外食費", emoji: "🍽️", color: "#d9645c" },
   { id: "daily", label: "日用品", emoji: "🧻", color: "#5cae8f" },
   { id: "transport", label: "交通", emoji: "🚃", color: "#4d8fd6" },
   { id: "entertainment", label: "娯楽", emoji: "🎮", color: "#a06cd5" },
