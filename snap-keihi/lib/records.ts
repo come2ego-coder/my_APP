@@ -5,7 +5,7 @@ export type Record = {
   date: string; // YYYY-MM-DD
   partner: string; // 取引先・仕入先・支払先
   amount: number;
-  category: string | null; // only meaningful when kind === "expense"
+  category: string | null; // meaningful when kind is "expense" or "purchase"
   memo: string;
   thumbnail: string | null; // small data URL, for the list view only
   createdAt: number;
@@ -22,12 +22,14 @@ export function loadRecords(): Record[] {
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-    return parsed.map((r: Record & { payee?: string }) => ({
-      ...r,
-      partner: r.partner ?? r.payee ?? "",
-      kind: r.kind ?? "expense",
-      category: r.kind === "revenue" || r.kind === "purchase" ? null : (r.category ?? "misc"),
-    }));
+    return parsed.map((r: Record & { payee?: string }) => {
+      const kind: EntryKind = r.kind ?? "expense";
+      let category = r.category ?? null;
+      if (kind === "revenue") category = null;
+      else if (kind === "expense") category = category ?? "misc";
+      else if (kind === "purchase") category = category ?? "ingredients";
+      return { ...r, partner: r.partner ?? r.payee ?? "", kind, category };
+    });
   } catch {
     return [];
   }
