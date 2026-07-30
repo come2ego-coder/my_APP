@@ -11,6 +11,13 @@ import {
 } from "@/lib/categories";
 import { dataUrlToBase64, resizeImage } from "@/lib/image";
 import {
+  type Ledger,
+  loadCurrentLedgerId,
+  loadLedgers,
+  saveCurrentLedgerId,
+  saveLedgers,
+} from "@/lib/ledgers";
+import {
   type Record as KakeiboRecord,
   loadRecords,
   monthKey,
@@ -84,12 +91,18 @@ export default function Home() {
   const [showTemplateManager, setShowTemplateManager] = useState(false);
   const [templateDraft, setTemplateDraft] = useState<TemplateDraft>(emptyTemplateDraft());
   const [authUser, setAuthUser] = useState<string | null>(null);
+  const [ledgers, setLedgers] = useState<Ledger[]>([]);
+  const [currentLedgerId, setCurrentLedgerId] = useState("1");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    const ls = loadLedgers();
+    const cur = loadCurrentLedgerId(ls[0].id);
     // eslint-disable-next-line react-hooks/set-state-in-effect -- hydrate from localStorage after mount
-    setRecords(loadRecords());
-    setTemplates(loadTemplates());
+    setLedgers(ls);
+    setCurrentLedgerId(cur);
+    setRecords(loadRecords(cur));
+    setTemplates(loadTemplates(cur));
     setHydrated(true);
   }, []);
 
@@ -127,8 +140,8 @@ export default function Home() {
 
   useEffect(() => {
     if (!hydrated) return;
-    saveRecords(records);
-    saveTemplates(templates);
+    saveRecords(currentLedgerId, records);
+    saveTemplates(currentLedgerId, templates);
     if (!authUser) return;
     const timer = setTimeout(() => {
       // Photos stay on-device only: they're too large to bundle into every
@@ -141,7 +154,7 @@ export default function Home() {
       }).catch(() => {});
     }, 500);
     return () => clearTimeout(timer);
-  }, [records, templates, hydrated, authUser]);
+  }, [records, templates, hydrated, authUser, currentLedgerId]);
 
   async function handleLogout() {
     setAuthUser(null);
@@ -150,6 +163,46 @@ export default function Home() {
     } catch {
       // best-effort; the cookie is short-lived anyway
     }
+  }
+
+  function switchLedger(id: string) {
+    if (id === currentLedgerId) return;
+    setCurrentLedgerId(id);
+    saveCurrentLedgerId(id);
+    setRecords(loadRecords(id));
+    setTemplates(loadTemplates(id));
+    setDraft(null);
+  }
+
+  function addLedger() {
+    const name = window.prompt("新しい帳簿の名前を入力してください");
+    if (!name || !name.trim()) return;
+    const newLedger: Ledger = { id: crypto.randomUUID(), name: name.trim() };
+    const next = [...ledgers, newLedger];
+    setLedgers(next);
+    saveLedgers(next);
+    switchLedger(newLedger.id);
+  }
+
+  function renameOrDeleteLedger(ledger: Ledger) {
+    const name = window.prompt("帳簿の名前を変更(空にすると削除できます)", ledger.name);
+    if (name === null) return;
+    const trimmed = name.trim();
+    if (!trimmed) {
+      if (ledgers.length <= 1) {
+        window.alert("最後の帳簿は削除できません。");
+        return;
+      }
+      if (!window.confirm(`「${ledger.name}」を削除しますか?この帳簿の記録は復元できません。`)) return;
+      const next = ledgers.filter((l) => l.id !== ledger.id);
+      setLedgers(next);
+      saveLedgers(next);
+      if (ledger.id === currentLedgerId) switchLedger(next[0].id);
+      return;
+    }
+    const next = ledgers.map((l) => (l.id === ledger.id ? { ...l, name: trimmed } : l));
+    setLedgers(next);
+    saveLedgers(next);
   }
 
   const currentMonth = todayStr().slice(0, 7);
@@ -449,6 +502,32 @@ export default function Home() {
             </Link>
           </>
         )}
+      </div>
+
+      <div className="flex items-center justify-center gap-1.5 mb-4 flex-wrap">
+        {ledgers.map((l) => (
+          <button
+            key={l.id}
+            type="button"
+            onClick={() => (l.id === currentLedgerId ? renameOrDeleteLedger(l) : switchLedger(l.id))}
+            className={`px-3 py-1.5 rounded-full text-xs font-semibold shadow-sm ${
+              l.id === currentLedgerId
+                ? "bg-accent text-white"
+                : "bg-white text-muted"
+            }`}
+          >
+            {l.name}
+            {l.id === currentLedgerId && <span className="ml-1 opacity-70">✏️</span>}
+          </button>
+        ))}
+        <button
+          type="button"
+          onClick={addLedger}
+          className="px-2.5 py-1.5 rounded-full text-xs font-semibold shadow-sm bg-white text-muted"
+          aria-label="帳簿を追加"
+        >
+          ＋
+        </button>
       </div>
 
       <div className="flex items-center justify-center gap-4 mb-4">

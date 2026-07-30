@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { loadCurrentLedgerId, loadLedgers } from "@/lib/ledgers";
 import { loadRecords } from "@/lib/records";
 import { loadTemplates } from "@/lib/templates";
 
@@ -17,8 +18,11 @@ export default function LoginPage() {
     e.preventDefault();
     setError(null);
 
+    const ls = loadLedgers();
+    const currentLedgerId = loadCurrentLedgerId(ls[0].id);
+
     if (mode === "login") {
-      const localRecords = loadRecords();
+      const localRecords = loadRecords(currentLedgerId);
       if (localRecords.length > 0) {
         const ok = window.confirm(
           "ログインすると、このアカウントに保存されている記録が表示されます。この端末だけに保存されていた記録は表示されなくなります(消えてはいませんが、切り替わります)。続けますか?",
@@ -32,7 +36,12 @@ export default function LoginPage() {
       const endpoint = mode === "signup" ? "/api/auth/signup" : "/api/auth/login";
       const payload =
         mode === "signup"
-          ? { username, password, records: loadRecords(), templates: loadTemplates() }
+          ? {
+              username,
+              password,
+              records: loadRecords(currentLedgerId),
+              templates: loadTemplates(currentLedgerId),
+            }
           : { username, password };
 
       const res = await fetch(endpoint, {
@@ -68,7 +77,9 @@ export default function LoginPage() {
       <header className="text-center mb-8">
         <h1 className="text-2xl font-bold text-accent-deep tracking-wide">📷 パシャ家計簿</h1>
         <p className="mt-1 text-sm text-muted">
-          {mode === "signup" ? "アカウントを作ると、機種変更してもデータを引き継げます。" : "アカウントにログイン"}
+          {mode === "signup"
+            ? "アカウントを作ると、機種変更しても今の帳簿のデータを引き継げます。"
+            : "アカウントにログイン"}
         </p>
       </header>
 
