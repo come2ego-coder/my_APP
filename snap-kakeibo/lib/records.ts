@@ -11,12 +11,20 @@ export type Record = {
   templateId?: string; // set if this entry was created from a recurring template
 };
 
-const STORAGE_KEY = "snap-kakeibo:records";
+const STORAGE_PREFIX = "snap-kakeibo:records";
+// Key used before multiple ledgers existed; migrated into the first ledger.
+const LEGACY_KEY = "snap-kakeibo:records";
 
-export function loadRecords(): Record[] {
+export function loadRecords(ledgerId: string): Record[] {
   if (typeof window === "undefined") return [];
   try {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const key = `${STORAGE_PREFIX}:${ledgerId}`;
+    let raw = window.localStorage.getItem(key);
+    // Only the first ledger inherits pre-multi-ledger data; a brand new
+    // ledger with no key yet should start empty, not clone the legacy data.
+    if (raw === null && ledgerId === "1") {
+      raw = window.localStorage.getItem(LEGACY_KEY);
+    }
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
@@ -27,10 +35,10 @@ export function loadRecords(): Record[] {
   }
 }
 
-export function saveRecords(records: Record[]): void {
+export function saveRecords(ledgerId: string, records: Record[]): void {
   if (typeof window === "undefined") return;
   try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+    window.localStorage.setItem(`${STORAGE_PREFIX}:${ledgerId}`, JSON.stringify(records));
   } catch {
     // localStorage full or unavailable; fail silently, nothing to recover here.
   }
