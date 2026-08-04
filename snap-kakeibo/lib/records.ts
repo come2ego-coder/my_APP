@@ -1,3 +1,5 @@
+import { idbGet, idbSet } from "./idb";
+
 export type Record = {
   id: string;
   date: string; // YYYY-MM-DD
@@ -15,46 +17,59 @@ const STORAGE_PREFIX = "snap-kakeibo:records";
 // Key used before multiple ledgers existed; migrated into the first ledger.
 const LEGACY_KEY = "snap-kakeibo:records";
 
-export function loadRecords(ledgerId: string): Record[] {
+function normalize(parsed: unknown): Record[] {
+  if (!Array.isArray(parsed)) return [];
+  // Older records saved before income tracking existed have no `kind`.
+  return parsed.map((r: Record) => ({ ...r, kind: r.kind ?? "expense" }));
+}
+
+export async function loadRecords(ledgerId: string): Promise<Record[]> {
   if (typeof window === "undefined") return [];
+  const key = `${STORAGE_PREFIX}:${ledgerId}`;
   try {
-    const key = `${STORAGE_PREFIX}:${ledgerId}`;
+    const fromIdb = await idbGet(key);
+    if (fromIdb !== null) return normalize(JSON.parse(fromIdb));
+
+    // Not in IndexedDB yet: this device may still have data sitting in
+    // localStorage from before photos were moved there (either this
+    // ledger's own namespaced key, or — for the very first ledger — the
+    // flat key used before multiple ledgers existed). Adopt it into
+    // IndexedDB and clear it out of localStorage so that small, easily
+    // exhausted quota is freed up rather than left holding photos forever.
     let raw = window.localStorage.getItem(key);
-    // Only the first ledger inherits pre-multi-ledger data; a brand new
-    // ledger with no key yet should start empty, not clone the legacy data.
     if (raw === null && ledgerId === "1") {
       raw = window.localStorage.getItem(LEGACY_KEY);
     }
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    // Older records saved before income tracking existed have no `kind`.
-    return parsed.map((r: Record) => ({ ...r, kind: r.kind ?? "expense" }));
+    if (raw === null) return [];
+
+    const records = normalize(JSON.parse(raw));
+    await idbSet(key, JSON.stringify(records));
+    window.localStorage.removeItem(key);
+    if (ledgerId === "1") window.localStorage.removeItem(LEGACY_KEY);
+    return records;
   } catch {
     return [];
   }
 }
 
 // "ok": saved everything, including photos.
-// "photos-dropped": storage was full, so photos were stripped out and only
-//   the amount/category/date/etc. was saved — nothing numeric was lost.
+// "photos-dropped": storage was full even in IndexedDB, so photos were
+//   stripped out and only the amount/category/date/etc. was saved —
+//   nothing numeric was lost. Should be rare given IndexedDB's much larger
+//   quota compared to localStorage.
 // "failed": couldn't save even without photos (should be extremely rare).
 export type SaveResult = "ok" | "photos-dropped" | "failed";
 
-export function saveRecords(ledgerId: string, records: Record[]): SaveResult {
+export async function saveRecords(ledgerId: string, records: Record[]): Promise<SaveResult> {
   if (typeof window === "undefined") return "ok";
   const key = `${STORAGE_PREFIX}:${ledgerId}`;
   try {
-    window.localStorage.setItem(key, JSON.stringify(records));
+    await idbSet(key, JSON.stringify(records));
     return "ok";
   } catch {
-    // Most likely QuotaExceededError from storing many receipt photos.
-    // Retry with photos stripped so the actual financial data still saves
-    // instead of the whole write — and therefore the new record — silently
-    // failing.
     try {
       const withoutPhotos = records.map((r) => ({ ...r, thumbnail: null }));
-      window.localStorage.setItem(key, JSON.stringify(withoutPhotos));
+      await idbSet(key, JSON.stringify(withoutPhotos));
       return "photos-dropped";
     } catch {
       return "failed";

@@ -97,14 +97,16 @@ export default function Home() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const ls = loadLedgers();
-    const cur = loadCurrentLedgerId(ls[0].id);
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- hydrate from localStorage after mount
-    setLedgers(ls);
-    setCurrentLedgerId(cur);
-    setRecords(loadRecords(cur));
-    setTemplates(loadTemplates(cur));
-    setHydrated(true);
+    (async () => {
+      const ls = loadLedgers();
+      const cur = loadCurrentLedgerId(ls[0].id);
+      const loadedRecords = await loadRecords(cur);
+      setLedgers(ls);
+      setCurrentLedgerId(cur);
+      setRecords(loadedRecords);
+      setTemplates(loadTemplates(cur));
+      setHydrated(true);
+    })();
   }, []);
 
   useEffect(() => {
@@ -141,15 +143,18 @@ export default function Home() {
 
   useEffect(() => {
     if (!hydrated) return;
-    const result = saveRecords(currentLedgerId, records);
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- reacting to a real localStorage write outcome, not derivable from render
-    setStorageWarning(
-      result === "photos-dropped"
-        ? "端末の保存容量がいっぱいのため、レシート写真が保存されませんでした。金額などの記録は保存されています。写真付きの古い記録を削除すると、また写真を保存できるようになります。"
-        : result === "failed"
-          ? "保存に失敗しました。端末の空き容量を確認し、不要な記録を削除してください。"
-          : null,
-    );
+    let cancelled = false;
+    (async () => {
+      const result = await saveRecords(currentLedgerId, records);
+      if (cancelled) return;
+      setStorageWarning(
+        result === "photos-dropped"
+          ? "端末の空き容量が少なくなっているため、レシート写真が保存されませんでした。金額などの記録は保存されています。端末の空き容量を確保すると、また写真を保存できるようになります。"
+          : result === "failed"
+            ? "保存に失敗しました。端末の空き容量を確認してください。"
+            : null,
+      );
+    })();
     saveTemplates(currentLedgerId, templates);
     if (!authUser) return;
     const timer = setTimeout(() => {
@@ -162,7 +167,10 @@ export default function Home() {
         body: JSON.stringify({ records: syncRecords, templates }),
       }).catch(() => {});
     }, 500);
-    return () => clearTimeout(timer);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
   }, [records, templates, hydrated, authUser, currentLedgerId]);
 
   async function handleLogout() {
@@ -174,11 +182,11 @@ export default function Home() {
     }
   }
 
-  function switchLedger(id: string) {
+  async function switchLedger(id: string) {
     if (id === currentLedgerId) return;
     setCurrentLedgerId(id);
     saveCurrentLedgerId(id);
-    setRecords(loadRecords(id));
+    setRecords(await loadRecords(id));
     setTemplates(loadTemplates(id));
     setDraft(null);
   }
