@@ -93,6 +93,7 @@ export default function Home() {
   const [authUser, setAuthUser] = useState<string | null>(null);
   const [ledgers, setLedgers] = useState<Ledger[]>([]);
   const [currentLedgerId, setCurrentLedgerId] = useState("1");
+  const [storageWarning, setStorageWarning] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -140,7 +141,15 @@ export default function Home() {
 
   useEffect(() => {
     if (!hydrated) return;
-    saveRecords(currentLedgerId, records);
+    const result = saveRecords(currentLedgerId, records);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reacting to a real localStorage write outcome, not derivable from render
+    setStorageWarning(
+      result === "photos-dropped"
+        ? "端末の保存容量がいっぱいのため、レシート写真が保存されませんでした。金額などの記録は保存されています。写真付きの古い記録を削除すると、また写真を保存できるようになります。"
+        : result === "failed"
+          ? "保存に失敗しました。端末の空き容量を確認し、不要な記録を削除してください。"
+          : null,
+    );
     saveTemplates(currentLedgerId, templates);
     if (!authUser) return;
     const timer = setTimeout(() => {
@@ -485,6 +494,12 @@ export default function Home() {
         <h1 className="text-2xl font-bold text-accent-deep tracking-wide">📷 パシャ家計簿</h1>
         <p className="mt-1 text-sm text-muted">レシートを撮るだけ。入力はほぼなし。</p>
       </header>
+
+      {storageWarning && (
+        <div className="mb-4 text-xs text-red-700 bg-red-50 border border-red-200 rounded-xl py-2.5 px-3">
+          ⚠️ {storageWarning}
+        </div>
+      )}
 
       <div className="flex items-center justify-center gap-2 mb-4 text-xs text-muted">
         {authUser ? (

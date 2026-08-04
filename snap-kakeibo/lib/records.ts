@@ -35,12 +35,30 @@ export function loadRecords(ledgerId: string): Record[] {
   }
 }
 
-export function saveRecords(ledgerId: string, records: Record[]): void {
-  if (typeof window === "undefined") return;
+// "ok": saved everything, including photos.
+// "photos-dropped": storage was full, so photos were stripped out and only
+//   the amount/category/date/etc. was saved — nothing numeric was lost.
+// "failed": couldn't save even without photos (should be extremely rare).
+export type SaveResult = "ok" | "photos-dropped" | "failed";
+
+export function saveRecords(ledgerId: string, records: Record[]): SaveResult {
+  if (typeof window === "undefined") return "ok";
+  const key = `${STORAGE_PREFIX}:${ledgerId}`;
   try {
-    window.localStorage.setItem(`${STORAGE_PREFIX}:${ledgerId}`, JSON.stringify(records));
+    window.localStorage.setItem(key, JSON.stringify(records));
+    return "ok";
   } catch {
-    // localStorage full or unavailable; fail silently, nothing to recover here.
+    // Most likely QuotaExceededError from storing many receipt photos.
+    // Retry with photos stripped so the actual financial data still saves
+    // instead of the whole write — and therefore the new record — silently
+    // failing.
+    try {
+      const withoutPhotos = records.map((r) => ({ ...r, thumbnail: null }));
+      window.localStorage.setItem(key, JSON.stringify(withoutPhotos));
+      return "photos-dropped";
+    } catch {
+      return "failed";
+    }
   }
 }
 
