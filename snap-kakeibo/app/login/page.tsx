@@ -22,7 +22,7 @@ export default function LoginPage() {
     const currentLedgerId = loadCurrentLedgerId(ls[0].id);
 
     if (mode === "login") {
-      const localRecords = loadRecords(currentLedgerId);
+      const localRecords = await loadRecords(currentLedgerId);
       if (localRecords.length > 0) {
         const ok = window.confirm(
           "ログインすると、このアカウントに保存されている記録が表示されます。この端末だけに保存されていた記録は表示されなくなります(消えてはいませんが、切り替わります)。続けますか?",
@@ -39,7 +39,7 @@ export default function LoginPage() {
           ? {
               username,
               password,
-              records: loadRecords(currentLedgerId),
+              records: await loadRecords(currentLedgerId),
               templates: loadTemplates(currentLedgerId),
             }
           : { username, password };
